@@ -104,5 +104,5 @@ if __name__ == "__main__":
     team_df.to_csv('ingestion/barttorvik/torvik_team_results_raw.csv', index=False)
     player_df.to_csv('ingestion/barttorvik/torvik_player_stats_raw.csv', index=False)
 
-    # load_to_snowflake(team_df, 'TORVIK_TEAM_RESULTS')  ← commented out
+    load_to_snowflake(team_df, 'TORVIK_TEAM_RESULTS')
     load_to_snowflake(player_df, 'TORVIK_PLAYER_STATS')
