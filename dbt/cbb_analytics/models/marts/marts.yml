@@ -32,3 +32,45 @@ models:
         description: "Season year e.g. 2025"
         tests:
           - not_null
+        
+  - name: fct_team_ratings
+    description: >
+      Core analytical table combining KenPom and BartTorvik team metrics.
+      One row per team per season. Joins via dim_teams to resolve team name
+      differences between sources. Contains efficiency ratings, tempo,
+      strength of schedule, and tournament metrics side by side.
+
+    columns:
+      - name: team_season_id
+        description: "Surrogate key — unique identifier for each team/season combination"
+        tests:
+          - unique
+          - not_null
+
+      - name: team_name
+        description: "Canonical team name"
+        tests:
+          - not_null
+
+      - name: season
+        description: "Season year e.g. 2025"
+        tests:
+          - not_null
+
+      - name: kenpom_adj_em
+        description: >
+          KenPom adjusted efficiency margin — adjusted offensive efficiency 
+          minus adjusted defensive efficiency. Primary overall team quality metric.
+
+      - name: torvik_adj_em
+        description: >
+          BartTorvik adjusted efficiency margin — same concept as KenPom AdjEM
+          but calculated independently. Use alongside kenpom_adj_em for consensus ranking.
+
+      - name: barthag
+        description: >
+          BartTorvik power rating — probability of beating an average team.
+          Ranges from 0 to 1, higher is better.
+
+      - name: wins_above_bubble
+        description: "Wins above the NCAA tournament bubble — key tournament selection metric"

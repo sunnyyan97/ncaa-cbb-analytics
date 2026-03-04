@@ -66,7 +66,7 @@ def load_to_snowflake(df: pd.DataFrame, table_name: str):
     conn.close()
 
 if __name__ == "__main__":
-    seasons = ['2025']
+    seasons = ['2026']
     browser = login(EMAIL, PASSWORD)
 
     efficiency_df = extract_efficiency(browser, seasons)

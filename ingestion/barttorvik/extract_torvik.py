@@ -116,7 +116,7 @@ def load_to_snowflake(df: pd.DataFrame, table_name: str):
 
 
 if __name__ == "__main__":
-    seasons = ['2025']
+    seasons = ['2026']
 
     team_df = extract_team_results(seasons)
     player_df = extract_player_stats(seasons)
