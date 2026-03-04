@@ -1,0 +1,34 @@
+version: 2
+
+models:
+  - name: dim_teams
+    description: >
+      Canonical team dimension table. Resolves team name differences between
+      KenPom and BartTorvik sources. One row per team per season.
+      All other mart models join to this table using team_name and season.
+
+    columns:
+      - name: team_season_id
+        description: "Surrogate key — unique identifier for each team/season combination"
+        tests:
+          - unique
+          - not_null
+
+      - name: team_name
+        description: "Canonical team name used as the join key across all mart models"
+        tests:
+          - not_null
+
+      - name: kenpom_name
+        description: "Team name as it appears in KenPom source"
+
+      - name: torvik_name
+        description: "Team name as it appears in BartTorvik source"
+
+      - name: conference
+        description: "Conference the team belongs to"
+
+      - name: season
+        description: "Season year e.g. 2025"
+        tests:
+          - not_null
