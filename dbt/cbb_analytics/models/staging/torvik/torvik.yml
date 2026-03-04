@@ -1,0 +1,97 @@
+version: 2
+
+models:
+  - name: stg_torvik__team_results
+    description: >
+      Staged BartTorvik team results. One row per team per season.
+      Contains adjusted offensive and defensive efficiency, barthag,
+      strength of schedule, and wins above bubble metrics.
+      Header row from source CSV is filtered out.
+
+    columns:
+      - name: team_season_id
+        description: "Surrogate key — unique identifier for each team/season combination"
+        tests:
+          - unique
+          - not_null
+
+      - name: team_name
+        description: "Team name as it appears on BartTorvik"
+        tests:
+          - not_null
+
+      - name: conference
+        description: "Conference the team belongs to"
+        tests:
+          - not_null
+
+      - name: season
+        description: "Season year e.g. 2025"
+        tests:
+          - not_null
+
+      - name: adj_off_efficiency
+        description: "Adjusted offensive efficiency — points scored per 100 possessions"
+        tests:
+          - not_null
+
+      - name: adj_def_efficiency
+        description: "Adjusted defensive efficiency — points allowed per 100 possessions"
+        tests:
+          - not_null
+
+      - name: barthag
+        description: >
+          BartTorvik power rating — probability of beating an average team.
+          Ranges from 0 to 1, higher is better.
+        tests:
+          - not_null
+
+      - name: wins_above_bubble
+        description: "Wins above the NCAA tournament bubble — key tournament selection metric"
+
+      - name: sos
+        description: "Overall strength of schedule"
+
+  - name: stg_torvik__player_stats
+    description: >
+      Staged BartTorvik player stats. One row per player per season.
+      Contains usage, shooting efficiency, advanced rates, box plus minus,
+      and per game stats. Ambiguous source columns excluded.
+
+    columns:
+      - name: player_season_id
+        description: "Surrogate key — unique identifier for each player/season combination"
+        tests:
+          - unique
+          - not_null
+
+      - name: player_name
+        description: "Player full name"
+        tests:
+          - not_null
+
+      - name: team_name
+        description: "Team the player plays for"
+        tests:
+          - not_null
+
+      - name: season
+        description: "Season year e.g. 2025"
+        tests:
+          - not_null
+
+      - name: off_rating
+        description: "Offensive rating — points produced per 100 possessions"
+
+      - name: usage_pct
+        description: "Percentage of team possessions used by the player while on court"
+
+      - name: bpm
+        description: "Box plus minus — estimated points contribution per 100 possessions vs average"
+
+      - name: obpm
+        description: "Offensive box plus minus"
+
+      - name: dbpm
+        description: "Defensive box plus minus"

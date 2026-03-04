@@ -1,0 +1,45 @@
+version: 2
+
+models:
+  - name: stg_kenpom__team_ratings
+    description: >
+      Staged KenPom team efficiency ratings scraped via kenpompy. 
+      One row per team per season. Contains tempo, offensive efficiency, 
+      and defensive efficiency metrics both raw and adjusted.
+
+    columns:
+      - name: team_season_id
+        description: "Surrogate key — unique identifier for each team/season combination"
+        tests:
+          - unique
+          - not_null
+
+      - name: team_name
+        description: "Team name as it appears on KenPom"
+        tests:
+          - not_null
+
+      - name: conference
+        description: "Conference the team belongs to"
+        tests:
+          - not_null
+
+      - name: season
+        description: "Season year e.g. 2025"
+        tests:
+          - not_null
+
+      - name: tempo_adj
+        description: "Adjusted possessions per 40 minutes accounting for opponent pace"
+        tests:
+          - not_null
+
+      - name: off_efficiency_adj
+        description: "Adjusted offensive efficiency — points scored per 100 possessions vs average defense"
+        tests:
+          - not_null
+
+      - name: def_efficiency_adj
+        description: "Adjusted defensive efficiency — points allowed per 100 possessions vs average offense"
+        tests:
+          - not_null
