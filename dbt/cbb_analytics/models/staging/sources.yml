@@ -1,0 +1,22 @@
+version: 2
+
+sources:
+  - name: kenpom
+    database: CBB_ANALYTICS
+    schema: RAW
+    tables:
+      - name: kenpom_team_ratings
+        description: "Raw KenPom team efficiency ratings scraped via kenpompy"
+        config:
+          freshness:
+            warn_after: {count: 7, period: day}
+        loaded_at_field: SEASON
+
+  - name: torvik
+    database: CBB_ANALYTICS
+    schema: RAW
+    tables:
+      - name: torvik_team_results
+        description: "Raw BartTorvik team results"
+      - name: torvik_player_stats
+        description: "Raw BartTorvik player stats"

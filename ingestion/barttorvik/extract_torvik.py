@@ -70,7 +70,7 @@ def extract_player_stats(seasons: list[str]) -> pd.DataFrame:
 
 
 def load_to_snowflake(df: pd.DataFrame, table_name: str):
-    """Loads a DataFrame to Snowflake raw schema."""
+    """Loads a DataFrame to Snowflake raw schema, replacing existing data."""
     conn = snowflake.connector.connect(
         account=os.getenv("SNOWFLAKE_ACCOUNT"),
         user=os.getenv("SNOWFLAKE_USER"),
@@ -80,18 +80,38 @@ def load_to_snowflake(df: pd.DataFrame, table_name: str):
         schema=os.getenv("SNOWFLAKE_SCHEMA")
     )
 
-    # Prefix numeric column names with COL_ to make valid Snowflake identifiers
+    cursor = conn.cursor()
+    cursor.execute(f"DROP TABLE IF EXISTS {table_name.upper()}")
+
+    # Convert all column names to strings first
+    df.columns = df.columns.astype(str)
+
+    # Clean column names — remove special characters invalid in Snowflake
+    df.columns = (
+        df.columns
+        .str.upper()
+        .str.replace('.', '_', regex=False)
+        .str.replace('-', '_', regex=False)
+        .str.replace(' ', '_', regex=False)
+        .str.replace('(', '', regex=False)
+        .str.replace(')', '', regex=False)
+        .str.strip('_')
+    )
+
+    # Prefix any remaining numeric column names
     df.columns = [
-        f"COL_{c}".upper() if str(c).isdigit() else str(c).upper() 
+        f"COL_{c}" if c[0].isdigit() else c
         for c in df.columns
     ]
 
     success, chunks, rows, _ = write_pandas(
-        conn, df, table_name.upper(), 
+        conn, df, table_name.upper(),
         auto_create_table=True,
-        quote_identifiers=False  # Don't quote column names, even if they have special characters
+        quote_identifiers=False
     )
     print(f"Loaded {rows} rows to {table_name}")
+
+    cursor.close()
     conn.close()
 
 

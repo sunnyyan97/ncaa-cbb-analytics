@@ -24,7 +24,7 @@ def extract_efficiency(browser, seasons: list[str]) -> pd.DataFrame:
     return pd.concat(all_seasons, ignore_index=True)
 
 def load_to_snowflake(df: pd.DataFrame, table_name: str):
-    """Loads a DataFrame to Snowflake raw schema."""
+    """Loads a DataFrame to Snowflake raw schema, replacing existing data."""
     conn = snowflake.connector.connect(
         account=os.getenv("SNOWFLAKE_ACCOUNT"),
         user=os.getenv("SNOWFLAKE_USER"),
@@ -34,11 +34,35 @@ def load_to_snowflake(df: pd.DataFrame, table_name: str):
         schema=os.getenv("SNOWFLAKE_SCHEMA")
     )
 
-    # Uppercase column names — Snowflake requirement
-    df.columns = [c.upper() for c in df.columns]
+    cursor = conn.cursor()
+    cursor.execute(f"DROP TABLE IF EXISTS {table_name.upper()}")
 
-    success, chunks, rows, _ = write_pandas(conn, df, table_name.upper(), auto_create_table=True)
+    # Clean column names — remove special characters invalid in Snowflake
+    df.columns = (
+        df.columns
+        .str.upper()
+        .str.replace('.', '_', regex=False)
+        .str.replace('-', '_', regex=False)
+        .str.replace(' ', '_', regex=False)
+        .str.replace('(', '', regex=False)
+        .str.replace(')', '', regex=False)
+        .str.strip('_')
+    )
+
+    # Prefix any remaining numeric column names
+    df.columns = [
+        f"COL_{c}" if c[0].isdigit() else c
+        for c in df.columns
+    ]
+
+    success, chunks, rows, _ = write_pandas(
+        conn, df, table_name.upper(),
+        auto_create_table=True,
+        quote_identifiers=False
+    )
     print(f"Loaded {rows} rows to {table_name}")
+
+    cursor.close()
     conn.close()
 
 if __name__ == "__main__":
