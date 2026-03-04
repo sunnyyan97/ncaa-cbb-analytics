@@ -69,4 +69,6 @@ jobs:
           SNOWFLAKE_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}
         run: |
           cd dbt/cbb_analytics
+          dbt deps
+          dbt run --profiles-dir .
           dbt test --profiles-dir .
