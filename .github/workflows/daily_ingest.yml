@@ -46,29 +46,31 @@ jobs:
       - name: Install dbt
         run: pip install dbt-snowflake
 
-      - name: Run dbt models
-        env:
-          SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
-          SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
-          SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
-          SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
-          SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
-          SNOWFLAKE_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}
+      - name: Create dbt profiles.yml
         run: |
-          cd dbt/cbb_analytics
-          dbt deps --profiles-dir .
-          dbt run --profiles-dir .
+          mkdir -p ~/.dbt
+          cat > ~/.dbt/profiles.yml << EOF
+          cbb_analytics:
+            target: dev
+            outputs:
+              dev:
+                type: snowflake
+                account: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+                user: ${{ secrets.SNOWFLAKE_USER }}
+                password: ${{ secrets.SNOWFLAKE_PASSWORD }}
+                warehouse: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+                database: ${{ secrets.SNOWFLAKE_DATABASE }}
+                schema: ${{ secrets.SNOWFLAKE_SCHEMA }}
+                threads: 4
+          EOF
 
-      - name: Run dbt tests
-        env:
-          SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
-          SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
-          SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
-          SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
-          SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
-          SNOWFLAKE_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}
+      - name: Run dbt models
         run: |
           cd dbt/cbb_analytics
           dbt deps
-          dbt run --profiles-dir .
-          dbt test --profiles-dir .
+          dbt run
+
+      - name: Run dbt tests
+        run: |
+          cd dbt/cbb_analytics
+          dbt test
