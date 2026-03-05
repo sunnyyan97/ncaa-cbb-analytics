@@ -74,3 +74,104 @@ models:
 
       - name: wins_above_bubble
         description: "Wins above the NCAA tournament bubble — key tournament selection metric"
+
+  - name: fct_player_stats
+    description: >
+      Player stats enriched with team context. One row per player per season.
+      Contains usage, shooting efficiency, advanced rates, box plus minus,
+      and per game stats. Joins to dim_teams for canonical team name context.
+
+    columns:
+      - name: player_season_id
+        description: "Surrogate key — unique identifier for each player/season combination"
+        tests:
+          - unique
+          - not_null
+
+      - name: player_name
+        description: "Player full name"
+        tests:
+          - not_null
+
+      - name: team_name
+        description: "Team the player plays for"
+        tests:
+          - not_null
+
+      - name: season
+        description: "Season year e.g. 2026"
+        tests:
+          - not_null
+
+      - name: bpm
+        description: "Box plus minus — estimated points contribution per 100 possessions vs average"
+
+      - name: obpm
+        description: "Offensive box plus minus"
+
+      - name: dbpm
+        description: "Defensive box plus minus"
+
+      - name: ts_pct
+        description: "True shooting percentage — accounts for 2s, 3s, and free throws"
+
+      - name: usage_pct
+        description: "Percentage of team possessions used by the player while on court"
+
+  - name: fct_tournament_profile
+    description: >
+      Master analytical table combining team efficiency ratings, strength of
+      schedule, tournament metrics, and starting five player averages.
+      One row per team per season. Tournament seed and region are null until
+      Selection Sunday March 15 — update after the field is announced.
+
+    columns:
+      - name: team_season_id
+        description: "Surrogate key — unique identifier for each team/season combination"
+        tests:
+          - unique
+          - not_null
+
+      - name: team_name
+        description: "Canonical team name"
+        tests:
+          - not_null
+
+      - name: season
+        description: "Season year e.g. 2026"
+        tests:
+          - not_null
+
+      - name: consensus_adj_em
+        description: >
+          Average of KenPom and BartTorvik adjusted efficiency margins.
+          Primary ranking metric combining both sources for a consensus view.
+
+      - name: barthag
+        description: "BartTorvik power rating — probability of beating an average team"
+
+      - name: wins_above_bubble
+        description: "Wins above the NCAA tournament bubble — key selection metric"
+
+      - name: is_tournament_team
+        description: "True if team made the NCAA tournament — populated after Selection Sunday"
+
+      - name: tournament_seed
+        description: "NCAA tournament seed 1-16 — populated after Selection Sunday"
+
+      - name: tournament_region
+        description: "NCAA tournament region — populated after Selection Sunday"
+
+      - name: top_player_name
+        description: "Name of the team's highest minute player with at least 10 games played"
+
+      - name: avg_bpm
+        description: "Average box plus minus across top 5 players by minutes percentage"
+
+      - name: avg_pts
+        description: "Average points per game across top 5 players by minutes percentage"
+
+      - name: experienced_players
+        description: >
+          Count of seniors and grad students in the top 5 by minutes.
+          Higher values correlate with tournament success historically.

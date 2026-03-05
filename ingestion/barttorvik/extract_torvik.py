@@ -33,15 +33,18 @@ def extract_team_results(seasons: list[str]) -> pd.DataFrame:
 def extract_player_stats(seasons: list[str]) -> pd.DataFrame:
     all_seasons = []
 
-    # Known column names for BartTorvik player stats
+    # Official column headers from barttorvik.com/pstatheaders.xlsx
     column_names = [
-        'player_name', 'team', 'conf', 'games', 'minutes_pct',
-        'ortg', 'usage', 'ef_g_pct', 'ts_pct', 'orb_pct',
-        'drb_pct', 'ast_pct', 'to_pct', 'blk_pct', 'stl_pct',
-        'ftr', 'two_pt_pct', 'three_pt_pct', 'ft_pct',
-        'two_pt_rate', 'three_pt_rate', 'ft_rate',
-        'pprod', 'stops', 'bpm', 'obpm', 'dbpm',
-        'player_id', 'year', 'height'
+        'player_name', 'team', 'conf', 'gp', 'min_per', 'ortg', 'usg',
+        'efg', 'ts_per', 'orb_per', 'drb_per', 'ast_per', 'to_per',
+        'ftm', 'fta', 'ft_per', 'two_pm', 'two_pa', 'two_p_per',
+        'tpm', 'tpa', 'tp_per', 'blk_per', 'stl_per', 'ftr', 'yr', 'ht',
+        'num', 'porpag', 'adjoe', 'pfr', 'year', 'pid', 'type',
+        'rec_rank', 'ast_tov', 'rim_made', 'rim_att', 'mid_made', 'mid_att',
+        'rim_pct', 'mid_pct', 'dunks_made', 'dunks_att', 'dunk_pct',
+        'pick', 'drtg', 'adrtg', 'dporpag', 'stops', 'bpm', 'obpm',
+        'dbpm', 'gbpm', 'mp', 'ogbpm', 'dgbpm', 'oreb', 'dreb', 'treb',
+        'ast', 'stl', 'blk', 'pts', 'role', 'three_p_per_100', 'season'
     ]
 
     for season in seasons:
