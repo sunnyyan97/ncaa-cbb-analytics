@@ -153,6 +153,7 @@ def get_connection():
 @st.cache_data(ttl=3600)
 def load_data():
     conn = get_connection()
+    cursor = conn.cursor()
     query = """
         SELECT
             team_name, conference, record, season,
@@ -175,9 +176,11 @@ def load_data():
         WHERE season = 2026
         ORDER BY consensus_adj_em DESC NULLS LAST
     """
-    df = pd.read_sql(query, conn)
-    df.columns = [c.lower() for c in df.columns]
-    return df
+    cursor.execute(query)
+    results = cursor.fetchall()
+    columns = [col[0].lower() for col in cursor.description]
+    cursor.close()
+    return pd.DataFrame(results, columns=columns)
 
 # ─── Load Data ───────────────────────────────────────────────────────────────
 try:
@@ -300,7 +303,7 @@ with tab1:
         title="TOP TEAMS BY CONSENSUS ADJUSTER EFFICIENCY MARGIN",
     )
 
-    st.plotly_chart(fig_bar, use_container_width=True)
+    st.plotly_chart(fig_bar, width="stretch")
 
     # Side by side source comparison
     st.markdown('<hr class="divider">', unsafe_allow_html=True)
@@ -332,7 +335,7 @@ with tab1:
         xaxis_title="Adjusted Efficiency Margin",
         yaxis=dict(autorange="reversed", gridcolor="#1f2937"),
     )
-    st.plotly_chart(fig_compare, use_container_width=True)
+    st.plotly_chart(fig_compare, width="stretch")
 
 # ── Tab 2: AdjO vs AdjD Scatter ───────────────────────────────────────────────
 with tab2:
@@ -347,7 +350,7 @@ with tab2:
             ["None"] + sorted(df["conference"].dropna().unique().tolist()),
             key="scatter_conf"
         )
-        min_wab = st.slider("Min wins above bubble", -20, 10, -5, key="scatter_wab")
+        min_wab = st.slider("Min wins above bubble", -20, 10, 0, key="scatter_wab")
 
     scatter_df = df[df["wins_above_bubble"] >= min_wab].copy()
 
@@ -391,7 +394,7 @@ with tab2:
         mode="markers+text",
         text=scatter_df["team_name"].apply(lambda t: t if len(t) <= 12 else t.split()[0]),
         textposition="top center",
-        textfont=dict(size=8, color="#9ca3af"),
+        textfont=dict(size=11, color="#9ca3af"),
         marker=dict(
             color=scatter_df["color"],
             size=scatter_df["size"],
@@ -431,7 +434,7 @@ with tab2:
         yaxis=dict(autorange="reversed", gridcolor="#1f2937"),
         showlegend=False,
     )
-    st.plotly_chart(fig_scatter, use_container_width=True)
+    st.plotly_chart(fig_scatter, width="stretch")
 
 # ── Tab 3: Starting Five Table ────────────────────────────────────────────────
 with tab3:
@@ -441,7 +444,7 @@ with tab3:
     col_t1, col_t2 = st.columns([1, 3])
     with col_t1:
         sort_col = st.selectbox("Sort by", [
-            "consensus_adj_em", "avg_bpm", "avg_pts",
+            "avg_bpm", "consensus_adj_em", "avg_pts",
             "avg_ts_pct", "avg_efg_pct", "experienced_players"
         ], key="tbl_sort")
         conf_t = st.selectbox(
@@ -489,7 +492,7 @@ with tab3:
 
     st.dataframe(
         tbl_display,
-        use_container_width=True,
+        width="stretch",
         height=600,
         hide_index=True,
     )
@@ -526,7 +529,7 @@ with tab3:
         yaxis=dict(autorange="reversed", gridcolor="#1f2937"),
         showlegend=False,
     )
-    st.plotly_chart(fig_exp, use_container_width=True)
+    st.plotly_chart(fig_exp, width="stretch")
 
 # ── Tab 4: WAB vs SOS ────────────────────────────────────────────────────────
 with tab4:
@@ -641,7 +644,7 @@ with tab4:
         yaxis_title="Wins Above Bubble",
         showlegend=False,
     )
-    st.plotly_chart(fig_wab, use_container_width=True)
+    st.plotly_chart(fig_wab, width="stretch")
 
     # WAB leaderboard below chart
     st.markdown('<hr class="divider">', unsafe_allow_html=True)
@@ -660,7 +663,7 @@ with tab4:
     wab_board["SOS"] = wab_board["SOS"].round(3)
     wab_board["NC SOS"] = wab_board["NC SOS"].round(3)
 
-    st.dataframe(wab_board, use_container_width=True, hide_index=True, height=450)
+    st.dataframe(wab_board, width="stretch", hide_index=True, height=450)
 
 # ─── Footer ───────────────────────────────────────────────────────────────────
 st.markdown("""
