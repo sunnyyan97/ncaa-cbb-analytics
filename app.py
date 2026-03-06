@@ -319,7 +319,25 @@ with tab1:
 
     # Color scale by rank
 
-    colors = [f"rgba(200,169,110,{max(0.3, 1 - i/n_teams_show)})" for i in range(len(filtered))]
+    # Conference color mapping
+    conf_colors = {
+    "ACC": "#60a5fa",   # soft blue
+    "B10": "#d4a853",   # warm gold
+    "B12": "#f87171",   # soft red
+    "SEC": "#4ade80",   # soft green
+    "BE":  "#c084fc",   # soft purple
+    "P12": "#fb923c",   # soft orange
+    "MWC": "#67e8f9",   # soft cyan
+    "Amer": "#f9a8d4",  # soft pink
+    "WCC": "#a3e635",   # soft lime
+    "MAC": "#94a3b8",   # slate gray
+    "CUSA": "#fbbf24",  # amber
+    "SB":  "#86efac",   # light green
+    "MVC": "#818cf8",   # indigo
+    "WAC": "#fca5a5",   # light red
+    }
+    default_color = "#4b5563"
+    colors = [conf_colors.get(conf, default_color) for conf in filtered["conference"]]
 
     fig_bar = go.Figure()
     fig_bar.add_trace(go.Bar(
@@ -327,6 +345,7 @@ with tab1:
         y=filtered["team_name"],
         orientation="h",
         marker_color=colors,
+        showlegend=False,
         text=filtered["consensus_adj_em"].apply(lambda x: f"{x:+.1f}"),
         textposition="outside",
         textfont=dict(size=11, color="#f0ede6"),
@@ -341,12 +360,23 @@ with tab1:
         )
     ))
 
+    # Add legend entries for conferences present in chart
+    for conf, color in conf_colors.items():
+        if conf in filtered["conference"].values:
+            fig_bar.add_trace(go.Scatter(
+                x=[None], y=[None],
+                mode="markers",
+                marker=dict(color=color, size=10, symbol="square"),
+                name=conf,
+                showlegend=True
+            ))
+
     fig_bar.update_layout(
         **PLOT_LAYOUT,
         height=max(400, n_teams_show * 28),
         xaxis_title="Consensus Adjusted Efficiency Margin",
         yaxis=dict(autorange="reversed", gridcolor="#1f2937"),
-        showlegend=False,
+        showlegend=True,
         title="TOP TEAMS BY CONSENSUS ADJUSTER EFFICIENCY MARGIN",
     )
 
@@ -359,28 +389,59 @@ with tab1:
 
     top25 = df.head(25).copy()
     fig_compare = go.Figure()
+
+    # Add connecting lines between KenPom and Torvik dots
+    for _, row in top25.iterrows():
+        fig_compare.add_shape(
+            type="line",
+            x0=row["kenpom_adj_em"],
+            x1=row["torvik_adj_em"],
+            y0=row["team_name"],
+            y1=row["team_name"],
+            line=dict(color="#374151", width=2)
+        )
+
+    # KenPom dots
     fig_compare.add_trace(go.Scatter(
         x=top25["kenpom_adj_em"],
         y=top25["team_name"],
         mode="markers",
         name="KenPom",
-        marker=dict(color="#c8a96e", size=10, symbol="circle"),
+        marker=dict(color="#c8a96e", size=12, symbol="circle"),
         hovertemplate="<b>%{y}</b><br>KenPom AdjEM: %{x:+.2f}<extra></extra>"
     ))
+
+    # BartTorvik dots
     fig_compare.add_trace(go.Scatter(
         x=top25["torvik_adj_em"],
         y=top25["team_name"],
         mode="markers",
         name="BartTorvik",
-        marker=dict(color="#e8532a", size=10, symbol="diamond"),
+        marker=dict(color="#e8532a", size=12, symbol="diamond"),
         hovertemplate="<b>%{y}</b><br>Torvik AdjEM: %{x:+.2f}<extra></extra>"
     ))
+
+    # Disagreement labels — show gap where models differ by more than 2 points
+    for _, row in top25.iterrows():
+        gap = abs(row["kenpom_adj_em"] - row["torvik_adj_em"])
+        if gap >= 2:
+            mid_x = (row["kenpom_adj_em"] + row["torvik_adj_em"]) / 2
+            fig_compare.add_annotation(
+                x=mid_x,
+                y=row["team_name"],
+                text=f"Δ{gap:.1f}",
+                showarrow=False,
+                font=dict(size=9, color="#6b7280"),
+                yshift=10
+            )
+
     fig_compare.update_layout(
         **PLOT_LAYOUT,
         height=600,
         title="KENPOM VS BARTTORVIK — TOP 25",
         xaxis_title="Adjusted Efficiency Margin",
         yaxis=dict(autorange="reversed", gridcolor="#1f2937"),
+        showlegend=True,
     )
     st.plotly_chart(fig_compare, width="stretch")
 
@@ -391,22 +452,27 @@ with tab2:
 
     col_s1, col_s2 = st.columns([1, 3])
     with col_s1:
-        source = st.selectbox("Data source", ["KenPom", "BartTorvik"], key="scatter_src")
+        source = st.selectbox("Data source", ["Combined", "KenPom", "BartTorvik"], key="scatter_src")
         highlight_conf = st.selectbox(
             "Highlight conference",
             ["None"] + sorted(df["conference"].dropna().unique().tolist()),
             key="scatter_conf"
         )
-        min_wab = st.slider("Min wins above bubble", -20, 10, 0, key="scatter_wab")
+        n_teams_scatter = st.slider("Top N teams by AdjEM", 10, len(df), 70, key="scatter_n")
 
-    scatter_df = df[df["wins_above_bubble"] >= min_wab].copy()
+    scatter_df = df.nlargest(n_teams_scatter, "consensus_adj_em").copy()
 
     if source == "KenPom":
         x_col, y_col = "kenpom_off_efficiency", "kenpom_def_efficiency"
         x_label, y_label = "KenPom Adj. Offensive Efficiency", "KenPom Adj. Defensive Efficiency"
-    else:
+    elif source == "BartTorvik":
         x_col, y_col = "torvik_off_efficiency", "torvik_def_efficiency"
         x_label, y_label = "BartTorvik Adj. Offensive Efficiency", "BartTorvik Adj. Defensive Efficiency"
+    else:
+        scatter_df["combined_off"] = (scatter_df["kenpom_off_efficiency"] + scatter_df["torvik_off_efficiency"]) / 2
+        scatter_df["combined_def"] = (scatter_df["kenpom_def_efficiency"] + scatter_df["torvik_def_efficiency"]) / 2
+        x_col, y_col = "combined_off", "combined_def"
+        x_label, y_label = "Combined Adj. Offensive Efficiency", "Combined Adj. Defensive Efficiency"
 
     scatter_df["color"] = scatter_df["conference"].apply(
     lambda c: "#c8a96e" if (highlight_conf != "None" and c == highlight_conf) else "#374151"
@@ -434,6 +500,25 @@ with tab2:
         x0=scatter_df[x_col].min()-2, x1=scatter_df[x_col].max()+2,
         y0=y_mid, y1=y_mid,
         line=dict(color="#374151", dash="dot", width=1))
+    
+    diag_x0 = scatter_df[x_col].min() - 2
+    diag_x1 = scatter_df[x_col].max() + 2
+    diag_y0 = y_mid - (diag_x0 - x_mid)
+    diag_y1 = y_mid - (diag_x1 - x_mid)
+
+    fig_scatter.add_shape(type="line",
+        x0=diag_x0, x1=diag_x1,
+        y0=diag_y0, y1=diag_y1,
+        line=dict(color="#c8a96e", dash="dash", width=1.5))
+
+    fig_scatter.add_annotation(
+        x=diag_x1 - 1,
+        y=diag_y1 - 1,
+        text="Equal Off/Def",
+        showarrow=False,
+        font=dict(family="DM Sans", size=10, color="#c8a96e"),
+        xanchor="right"
+    )
 
     fig_scatter.add_trace(go.Scatter(
         x=scatter_df[x_col],
@@ -528,21 +613,32 @@ with tab3:
     tbl_display = tbl[list(display_cols.keys())].rename(columns=display_cols)
 
     # Format percentages
+    # Convert percentages to 0-100 scale but keep as numbers for sorting
     for col in ["Avg TS%", "Avg eFG%", "Avg 3P%"]:
-        tbl_display[col] = (tbl_display[col] * 100).round(1).astype(str) + "%"
-
-    for col in ["AdjEM", "Avg BPM", "Avg OBPM", "Avg DBPM"]:
-        tbl_display[col] = tbl_display[col].apply(lambda x: f"{x:+.2f}" if pd.notna(x) else "—")
-
-    for col in ["Avg Pts", "Avg Reb", "Avg Ast", "Top Pts"]:
-        tbl_display[col] = tbl_display[col].apply(lambda x: f"{x:.1f}" if pd.notna(x) else "—")
+        tbl_display[col] = tbl_display[col].apply(
+            lambda x: round(x * 100, 1) if pd.notna(x) and x <= 1 else round(x, 1) if pd.notna(x) else None
+        )
 
     st.dataframe(
         tbl_display,
         width="stretch",
         height=600,
         hide_index=True,
+        column_config={
+        "Avg TS%":  st.column_config.NumberColumn("Avg TS%",  format="%.1f%%"),
+        "Avg eFG%": st.column_config.NumberColumn("Avg eFG%", format="%.1f%%"),
+        "Avg 3P%":  st.column_config.NumberColumn("Avg 3P%",  format="%.1f%%"),
+        "AdjEM":    st.column_config.NumberColumn("AdjEM",    format="%+.2f"),
+        "Avg BPM":  st.column_config.NumberColumn("Avg BPM",  format="%+.2f"),
+        "Avg OBPM": st.column_config.NumberColumn("Avg OBPM", format="%+.2f"),
+        "Avg DBPM": st.column_config.NumberColumn("Avg DBPM", format="%+.2f"),
+        "Avg Pts":  st.column_config.NumberColumn("Avg Pts",  format="%.1f"),
+        "Avg Reb":  st.column_config.NumberColumn("Avg Reb",  format="%.1f"),
+        "Avg Ast":  st.column_config.NumberColumn("Avg Ast",  format="%.1f"),
+        "Top Pts":  st.column_config.NumberColumn("Top Pts",  format="%.1f"),
+        }
     )
+
 
     # Experience breakdown
     st.markdown('<hr class="divider">', unsafe_allow_html=True)
@@ -591,7 +687,7 @@ with tab4:
             ["None"] + sorted(df["conference"].dropna().unique().tolist()),
             key="wab_conf"
         )
-        min_games_w = st.slider("Min quality games", 0, 20, 5, key="wab_qual")
+        min_games_w = st.slider("Min quality games", 0, 20, 10, key="wab_qual")
 
     sos_map = {
         "Overall SOS": "sos",
