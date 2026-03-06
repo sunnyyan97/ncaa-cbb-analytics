@@ -202,35 +202,81 @@ top_team = df.iloc[0]
 avg_em = df["consensus_adj_em"].mean()
 n_teams = len(df)
 
-st.markdown(f"""
-<div class="metric-row">
-    <div class="metric-card">
-        <div class="val">#{1}</div>
-        <div class="lbl">Top Ranked</div>
-        <div style="color:#f0ede6;font-size:0.9rem;margin-top:0.3rem">{top_team['team_name']}</div>
-    </div>
-    <div class="metric-card">
-        <div class="val">{top_team['consensus_adj_em']:+.1f}</div>
-        <div class="lbl">Best AdjEM</div>
-        <div style="color:#6b7280;font-size:0.8rem;margin-top:0.3rem">{top_team['team_name']}</div>
-    </div>
-    <div class="metric-card">
-        <div class="val">{top_team['barthag']:.3f}</div>
-        <div class="lbl">Top Barthag</div>
-        <div style="color:#6b7280;font-size:0.8rem;margin-top:0.3rem">{top_team['team_name']}</div>
-    </div>
-    <div class="metric-card">
-        <div class="val">{n_teams}</div>
-        <div class="lbl">Teams Tracked</div>
-        <div style="color:#6b7280;font-size:0.8rem;margin-top:0.3rem">D1 2025–26</div>
-    </div>
-    <div class="metric-card">
-        <div class="val">{avg_em:+.1f}</div>
-        <div class="lbl">Avg AdjEM</div>
-        <div style="color:#6b7280;font-size:0.8rem;margin-top:0.3rem">All Teams</div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+# ─── Identify featured teams ─────────────────────────────────────────────────
+best_overall = df.iloc[0]
+best_offense = df.loc[df["kenpom_off_efficiency"].idxmax()]
+best_defense = df.loc[df["kenpom_def_efficiency"].idxmin()]
+best_resume  = df.loc[df["wins_above_bubble"].idxmax()]
+best_five = df.loc[df["avg_bpm"].idxmax()]
+
+featured = [
+    {
+        "label": "BEST OVERALL",
+        "team": best_overall["team_name"],
+        "headline": f"{best_overall['consensus_adj_em']:+.1f}",
+        "sub": "Consensus AdjEM",
+        "detail": f"{best_overall['record']} · {best_overall['conference']}",
+        "accent": "#c8a96e",
+    },
+    {
+        "label": "BEST OFFENSE",
+        "team": best_offense["team_name"],
+        "headline": f"{best_offense['kenpom_off_efficiency']:.1f}",
+        "sub": "KenPom Adj. Offense",
+        "detail": f"{best_offense['record']} · {best_offense['conference']}",
+        "accent": "#e8532a",
+    },
+    {
+        "label": "BEST DEFENSE",
+        "team": best_defense["team_name"],
+        "headline": f"{best_defense['kenpom_def_efficiency']:.1f}",
+        "sub": "KenPom Adj. Defense",
+        "detail": f"{best_defense['record']} · {best_defense['conference']}",
+        "accent": "#4a9eff",
+    },
+    {
+        "label": "BEST RÉSUMÉ",
+        "team": best_resume["team_name"],
+        "headline": f"{best_resume['wins_above_bubble']:+.1f}",
+        "sub": "Wins Above Bubble",
+        "detail": f"SOS: {best_resume['sos']:.3f} · {best_resume['conference']}",
+        "accent": "#34d399",
+    },
+    {
+        "label": "BEST STARTING 5",
+        "team": best_five["team_name"],
+        "headline": f"{best_five['avg_bpm']:+.2f}",
+        "sub": "Avg BPM — Top 5 by Minutes",
+        "detail": f"{best_five['record']} · {best_five['conference']}",
+        "accent": "#a78bfa",
+    },
+]
+
+# ─── Render feature cards ─────────────────────────────────────────────────────
+
+card_cols = st.columns(5)
+for col, card in zip(card_cols, featured):
+    with col:
+        st.markdown(f"""
+        <div style="
+            background: #111827;
+            border: 1.5px solid {card['accent']};
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        ">
+            <div style="font-size:0.65rem;color:#6b7280;text-transform:uppercase;
+                        letter-spacing:0.1em;font-family:'DM Sans'">{card['label']}</div>
+            <div style="font-family:'Bebas Neue';font-size:2rem;
+                        color:{card['accent']};line-height:1.1;margin-top:0.2rem">
+                {card['headline']}
+            </div>
+            <div style="font-size:0.7rem;color:#9ca3af;margin-top:0.1rem">{card['sub']}</div>
+            <div style="font-size:0.85rem;color:#f0ede6;
+                        margin-top:0.4rem;font-weight:500">{card['team']}</div>
+            <div style="font-size:0.72rem;color:#6b7280;margin-top:0.1rem">{card['detail']}</div>
+        </div>
+        """, unsafe_allow_html=True)
 
 # ─── Plotly Theme ─────────────────────────────────────────────────────────────
 PLOT_LAYOUT = dict(
@@ -272,6 +318,7 @@ with tab1:
     filtered = filtered.head(n_teams_show)
 
     # Color scale by rank
+
     colors = [f"rgba(200,169,110,{max(0.3, 1 - i/n_teams_show)})" for i in range(len(filtered))]
 
     fig_bar = go.Figure()
@@ -362,7 +409,7 @@ with tab2:
         x_label, y_label = "BartTorvik Adj. Offensive Efficiency", "BartTorvik Adj. Defensive Efficiency"
 
     scatter_df["color"] = scatter_df["conference"].apply(
-        lambda c: "#c8a96e" if (highlight_conf != "None" and c == highlight_conf) else "#374151"
+    lambda c: "#c8a96e" if (highlight_conf != "None" and c == highlight_conf) else "#374151"
     )
     scatter_df["size"] = scatter_df["barthag"].apply(lambda b: max(6, b * 20))
     scatter_df["opacity"] = scatter_df["conference"].apply(
@@ -557,7 +604,7 @@ with tab4:
     wab_df = wab_df.dropna(subset=["wins_above_bubble", sos_col])
 
     wab_df["color"] = wab_df["conference"].apply(
-        lambda c: "#c8a96e" if (highlight_conf_w != "None" and c == highlight_conf_w) else "#374151"
+    lambda c: "#c8a96e" if (highlight_conf_w != "None" and c == highlight_conf_w) else "#374151"
     )
     wab_df["opacity"] = wab_df["conference"].apply(
         lambda c: 1.0 if (highlight_conf_w == "None" or c == highlight_conf_w) else 0.25
