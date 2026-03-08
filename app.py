@@ -5,6 +5,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import os
 from dotenv import load_dotenv
+from modeling.predict import get_all_team_stats, predict_matchup
 
 load_dotenv()
 
@@ -182,6 +183,14 @@ def load_data():
     cursor.close()
     return pd.DataFrame(results, columns=columns)
 
+@st.cache_data(ttl=3600)
+def load_team_stats():
+    df = get_all_team_stats()
+    teams = df.set_index("team_name").to_dict("index")
+    for team_name, stats in teams.items():
+        stats["team_name"] = team_name
+    return teams
+
 # ─── Load Data ───────────────────────────────────────────────────────────────
 try:
     df = load_data()
@@ -291,7 +300,8 @@ PLOT_LAYOUT = dict(
 )
 
 # ─── Tabs ─────────────────────────────────────────────────────────────────────
-tab1, tab2, tab3, tab4 = st.tabs([
+tab5, tab1, tab2, tab3, tab4 = st.tabs([
+    "🏀  Matchup Predictor",
     "📊  Efficiency Rankings",
     "⚡  Offense vs Defense",
     "👥  Starting Five",
@@ -807,6 +817,167 @@ with tab4:
     wab_board["NC SOS"] = wab_board["NC SOS"].round(3)
 
     st.dataframe(wab_board, width="stretch", hide_index=True, height=450)
+
+with tab5:
+    st.markdown('<div class="section-label">MATCHUP PREDICTOR</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-sub">Formula-based log5 win probability · Consensus AdjEM · Location adjusted</div>', unsafe_allow_html=True)
+
+    teams = load_team_stats()
+    team_list = sorted(teams.keys())
+
+    # ── Team selectors ────────────────────────────────────────────────
+    col_p1, col_p2, col_p3 = st.columns([2, 1, 2])
+    with col_p1:
+        team_a_name = st.selectbox(
+            "Team A",
+            team_list,
+            index=team_list.index("Duke") if "Duke" in team_list else 0,
+            key="pred_team_a"
+        )
+    with col_p2:
+        location = st.selectbox(
+            "Location",
+            ["neutral", "home", "away"],
+            key="pred_location",
+            help="Home/Away is from Team A's perspective"
+        )
+    with col_p3:
+        team_b_name = st.selectbox(
+            "Team B",
+            team_list,
+            index=team_list.index("Michigan") if "Michigan" in team_list else 1,
+            key="pred_team_b"
+        )
+
+    if team_a_name == team_b_name:
+        st.warning("Please select two different teams.")
+    else:
+        result = predict_matchup(teams[team_a_name], teams[team_b_name], location)
+        team_a_stats = teams[team_a_name]
+        team_b_stats = teams[team_b_name]
+        winner = result["predicted_winner"]
+        winner_prob = result["team_a_win_prob"] if winner == team_a_name else result["team_b_win_prob"]
+        winner_is_a = winner == team_a_name
+
+        # ── Win probability bar ───────────────────────────────────────
+        st.markdown(f"""
+        <div style="background:#111827;border:1px solid #1f2937;border-radius:12px;padding:1.5rem;margin:1.5rem 0">
+            <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:1rem">
+                <div>
+                    <div style="font-family:'Bebas Neue';font-size:1.2rem;color:{'#c8a96e' if winner_is_a else '#9ca3af'}">{team_a_name}</div>
+                    <div style="font-family:'Bebas Neue';font-size:2.8rem;color:{'#c8a96e' if winner_is_a else '#6b7280'};line-height:1">
+                        {result['team_a_win_prob']*100:.1f}%
+                    </div>
+                </div>
+                <div style="font-family:'Bebas Neue';font-size:0.8rem;color:#374151;letter-spacing:0.12em;padding-bottom:0.5rem">
+                    WIN PROBABILITY
+                </div>
+                <div style="text-align:right">
+                    <div style="font-family:'Bebas Neue';font-size:1.2rem;color:{'#c8a96e' if not winner_is_a else '#9ca3af'}">{team_b_name}</div>
+                    <div style="font-family:'Bebas Neue';font-size:2.8rem;color:{'#c8a96e' if not winner_is_a else '#6b7280'};line-height:1">
+                        {result['team_b_win_prob']*100:.1f}%
+                    </div>
+                </div>
+            </div>
+            <div style="background:#1f2937;border-radius:999px;height:10px;overflow:hidden">
+                <div style="height:100%;border-radius:999px;background:linear-gradient(90deg,#c8a96e 0%,#e8532a 100%);width:{result['team_a_win_prob']*100:.1f}%"></div>
+            </div>
+            <div style="display:flex;justify-content:center;margin-top:0.75rem">
+                <div style="background:#0a0e1a;border:1px solid #c8a96e;border-radius:999px;padding:0.3rem 1.2rem;font-size:0.75rem;color:#c8a96e;font-family:'Bebas Neue';letter-spacing:0.1em">
+                    {winner} FAVORED
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # ── Score cards ───────────────────────────────────────────────
+        score_col1, score_col2, score_col3 = st.columns([5, 2, 5])
+        with score_col1:
+            st.markdown(f"""
+            <div style="background:#111827;border:2px solid {'#c8a96e' if winner_is_a else '#1f2937'};border-radius:10px;padding:1.5rem;text-align:center">
+                <div style="font-size:0.6rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.1em">{team_a_name}</div>
+                <div style="font-family:'Bebas Neue';font-size:4.5rem;color:#f0ede6;line-height:1;margin:0.2rem 0">{result['team_a_score']}</div>
+                <div style="font-size:0.7rem;color:#6b7280">projected pts</div>
+                <div style="font-size:0.78rem;color:#9ca3af;margin-top:0.75rem;border-top:1px solid #1f2937;padding-top:0.75rem">
+                    ⭐ {team_a_stats.get('top_player_name', 'N/A')}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        with score_col2:
+            st.markdown(f"""
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:0.25rem;padding-top:1rem">
+                <div style="font-family:'Bebas Neue';font-size:0.85rem;color:#374151">BY</div>
+                <div style="font-family:'Bebas Neue';font-size:2.8rem;color:#c8a96e;line-height:1">{result['predicted_margin']}</div>
+                <div style="font-size:0.6rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.08em">pts</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with score_col3:
+            st.markdown(f"""
+            <div style="background:#111827;border:2px solid {'#c8a96e' if not winner_is_a else '#1f2937'};border-radius:10px;padding:1.5rem;text-align:center">
+                <div style="font-size:0.6rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.1em">{team_b_name}</div>
+                <div style="font-family:'Bebas Neue';font-size:4.5rem;color:#f0ede6;line-height:1;margin:0.2rem 0">{result['team_b_score']}</div>
+                <div style="font-size:0.7rem;color:#6b7280">projected pts</div>
+                <div style="font-size:0.78rem;color:#9ca3af;margin-top:0.75rem;border-top:1px solid #1f2937;padding-top:0.75rem">
+                    ⭐ {team_b_stats.get('top_player_name', 'N/A')}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        # ── Metric breakdown ──────────────────────────────────────────
+        st.markdown('<hr style="border-color:#1f2937;margin:1.5rem 0">', unsafe_allow_html=True)
+        st.markdown('<div class="section-label">METRIC BREAKDOWN</div>', unsafe_allow_html=True)
+
+        metrics = [
+            ("Efficiency Margin", "consensus_adj_em", True, lambda v: f"{v:+.1f}"),
+            ("Offense",           "kenpom_off_efficiency", True,  lambda v: f"{v:.1f}"),
+            ("Defense",           "kenpom_def_efficiency", False, lambda v: f"{v:.1f}"),
+            ("Barthag",           "barthag",          True,  lambda v: f"{v:.3f}"),
+            ("Starting Five BPM", "avg_bpm",          True,  lambda v: f"{v:+.2f}"),
+            ("Experience",        "experienced_players", True, lambda v: f"{int(v)}/5 veterans"),
+            ("Strength of Schedule", "sos",           True,  lambda v: f"{v:.3f}"),
+        ]
+
+        for label, key, higher_better, fmt in metrics:
+            val_a = team_a_stats.get(key, 0) or 0
+            val_b = team_b_stats.get(key, 0) or 0
+            edge_a = val_a > val_b if higher_better else val_a < val_b
+            tied = val_a == val_b
+
+            col_m1, col_m2, col_m3 = st.columns([3, 2, 3])
+            with col_m1:
+                color_a = "#c8a96e" if (edge_a and not tied) else "#6b7280"
+                arrow_a = "▶ " if (edge_a and not tied) else ""
+                st.markdown(f"""
+                <div style="text-align:right;padding:0.45rem 0.5rem;font-size:1.25rem;color:{color_a};font-weight:{'800' if edge_a and not tied else '500'}">
+                    {arrow_a}{fmt(val_a)}
+                </div>
+                """, unsafe_allow_html=True)
+            with col_m2:
+                st.markdown(f"""
+                <div style="text-align:center;padding:0.45rem 0;font-size:1.11rem;color:#4b5563;text-transform:uppercase;letter-spacing:0.07em">
+                    {label}
+                </div>
+                """, unsafe_allow_html=True)
+            with col_m3:
+                color_b = "#c8a96e" if (not edge_a and not tied) else "#6b7280"
+                arrow_b = " ◀" if (not edge_a and not tied) else ""
+                st.markdown(f"""
+                <div style="text-align:left;padding:0.45rem 0.5rem;font-size:1.25rem;color:{color_b};font-weight:{'800' if not edge_a and not tied else '500'}">
+                    {fmt(val_b)}{arrow_b}
+                </div>
+                """, unsafe_allow_html=True)
+
+        # ── Model note ────────────────────────────────────────────────
+        st.markdown("""
+        <div style="margin-top:2rem;padding:0.75rem 1rem;background:#0f1520;border-radius:8px;border-left:3px solid #1f2937">
+            <span style="font-size:0.7rem;color:#4b5563">
+                <strong style="color:#6b7280">Model note:</strong>
+                Formula-based log5 predictor using consensus AdjEM. Location adjustment ±3.5 pts for home/away.
+                Scores estimated from team tempo and offensive/defensive efficiency.
+                A trained classification model using historical game results will replace this baseline post-season.
+            </span>
+        </div>
+        """, unsafe_allow_html=True)
 
 # ─── Footer ───────────────────────────────────────────────────────────────────
 st.markdown("""
