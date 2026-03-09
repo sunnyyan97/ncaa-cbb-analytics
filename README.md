@@ -2,8 +2,6 @@
 
 An end-to-end analytics engineering pipeline for NCAA college basketball, built on the modern data stack. Ingests data daily from KenPom and BartTorvik, transforms it through a dbt pipeline in Snowflake, and surfaces it through an interactive Streamlit dashboard.
 
-**[View Live Dashboard →](https://your-app.streamlit.app)**
-
 ---
 
 ## Overview
@@ -11,6 +9,23 @@ An end-to-end analytics engineering pipeline for NCAA college basketball, built 
 This project demonstrates a production-grade analytics engineering workflow applied to a real-world domain. The pipeline runs automatically every morning, pulling the latest team efficiency ratings and player stats, rebuilding all dbt models, and making fresh data available in the dashboard — with no manual intervention.
 
 The analytical focus is NCAA tournament profiling: identifying which teams have the efficiency margins, strength of schedule, and player quality to succeed in March.
+
+---
+
+## Live Dashboard
+
+**[View Live Dashboard →]([https://your-app.streamlit.app](https://sunny-yan-cbb-analytics.streamlit.app/))**
+
+An interactive Streamlit dashboard that queries Snowflake directly and refreshes every hour. Built with Plotly on a dark navy theme with gold accents.
+
+![Matchup Predictor](images/Screenshot_2026-03-09_at_5_22_56_PM.png)
+
+**Tabs:**
+- **Matchup Predictor** — Select any two D1 teams and a location (home/away/neutral) to generate a win probability, projected score, and side-by-side metric breakdown. Uses a formula-based log5 model on consensus AdjEM with location adjustment.
+- **Efficiency Rankings** — Bar chart of top teams by consensus AdjEM, color-encoded by conference. Includes a barbell chart comparing KenPom vs BartTorvik rankings with disagreement callouts.
+- **Offense vs Defense** — Scatter plot of adjusted offensive vs defensive efficiency with quadrant labels and a diagonal line separating elite two-way teams.
+- **Starting Five** — Sortable table of team and player metrics aggregated across each team's top 5 by minutes percentage.
+- **WAB vs SOS** — Scatter identifying teams with strong résumés against tough schedules vs teams padding stats against weak competition.
 
 ---
 
@@ -152,18 +167,6 @@ BartTorvik's player stats CSV ships without headers. Rather than relying on frag
 
 **Consensus efficiency margin**
 Rather than choosing one model over the other, `fct_tournament_profile` averages KenPom and BartTorvik adjusted efficiency margins into a single `consensus_adj_em` metric. Where the two models strongly disagree the source comparison chart in the dashboard surfaces the gap.
-
----
-
-## Dashboard
-
-The Streamlit dashboard queries `fct_tournament_profile` directly from Snowflake and refreshes every hour.
-
-**Tabs:**
-- **Efficiency Rankings** — Bar chart of top teams by consensus AdjEM, color-encoded by conference. Includes a barbell chart comparing KenPom vs BartTorvik rankings with disagreement callouts.
-- **Offense vs Defense** — Scatter plot of adjusted offensive vs defensive efficiency with quadrant labels and a diagonal line separating elite two-way teams.
-- **Starting Five** — Sortable table of team and player metrics aggregated across each team's top 5 by minutes.
-- **WAB vs SOS** — Scatter identifying teams with strong résumés against tough schedules vs teams padding stats against weak competition.
 
 ---
 
