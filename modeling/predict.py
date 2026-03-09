@@ -92,10 +92,6 @@ def predict_matchup(team_a: dict, team_b: dict, location: str = "neutral") -> di
     win_prob_a = 1 / (1 + 10 ** (-em_diff / 15))
     win_prob_b = 1 - win_prob_a
 
-    # Predicted margin using linear relationship
-    # Roughly 1 point of margin per 3 AdjEM points
-    predicted_margin = team_a_score - team_b_score
-
     # Predicted scores using tempo and efficiency
     avg_tempo = (
         team_a.get("kenpom_tempo", 68) + team_b.get("kenpom_tempo", 68)
@@ -128,6 +124,8 @@ def predict_matchup(team_a: dict, team_b: dict, location: str = "neutral") -> di
     team_b_score = round(
         ((team_b_off + team_a_def) / 2 / 100) * possessions - score_adj, 1
     )
+
+    predicted_margin = team_a_score - team_b_score
 
     # Metric-by-metric breakdown — who has the edge on each dimension
     breakdown = {
