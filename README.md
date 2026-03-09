@@ -14,7 +14,7 @@ The analytical focus is NCAA tournament profiling: identifying which teams have 
 
 ## Live Dashboard
 
-**[View Live Dashboard →]([https://your-app.streamlit.app](https://sunny-yan-cbb-analytics.streamlit.app/))**
+**[View Live Dashboard →](https://sunny-yan-cbb-analytics.streamlit.app/)**
 
 Using data ingested from KenPom and Bart Torvik, I created an interactive Streamlit dashboard that queries Snowflake directly and refreshes daily. Built with Plotly.
 
