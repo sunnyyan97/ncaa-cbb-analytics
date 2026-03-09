@@ -94,7 +94,7 @@ def predict_matchup(team_a: dict, team_b: dict, location: str = "neutral") -> di
 
     # Predicted margin using linear relationship
     # Roughly 1 point of margin per 3 AdjEM points
-    predicted_margin = em_diff / 3
+    predicted_margin = team_a_score - team_b_score
 
     # Predicted scores using tempo and efficiency
     avg_tempo = (
