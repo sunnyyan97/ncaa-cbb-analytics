@@ -16,9 +16,9 @@ The analytical focus is NCAA tournament profiling: identifying which teams have 
 
 **[View Live Dashboard →]([https://your-app.streamlit.app](https://sunny-yan-cbb-analytics.streamlit.app/))**
 
-An interactive Streamlit dashboard that queries Snowflake directly and refreshes every hour. Built with Plotly on a dark navy theme with gold accents.
+Using data ingested from KenPom and Bart Torvik, I created an interactive Streamlit dashboard that queries Snowflake directly and refreshes daily. Built with Plotly.
 
-![Matchup Predictor](images/Screenshot_2026-03-09_at_5_22_56_PM.png)
+![Matchup Predictor](https://github.com/sunnyyan97/ncaa-cbb-analytics/blob/main/images/matchup_predictor.png)
 
 **Tabs:**
 - **Matchup Predictor** — Select any two D1 teams and a location (home/away/neutral) to generate a win probability, projected score, and side-by-side metric breakdown. Uses a formula-based log5 model on consensus AdjEM with location adjustment.
