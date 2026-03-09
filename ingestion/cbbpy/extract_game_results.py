@@ -7,6 +7,13 @@ import time
 
 load_dotenv()
 
+# ── Constants ──────────────────────────────────────────────────────────────────
+
+MIN_EXPECTED_GAMES = 1000  # safety threshold — skip Snowflake load if below this
+MAX_RETRIES = 3            # retry attempts per team on transient failures
+
+# ── ESPN → BartTorvik name mapping ─────────────────────────────────────────────
+
 ESPN_TO_TORVIK = {
     "Air Force Falcons": "Air Force",
     "Akron Zips": "Akron",
@@ -129,7 +136,6 @@ ESPN_TO_TORVIK = {
     "Iona Gaels": "Iona",
     "Iowa Hawkeyes": "Iowa",
     "Iowa State Cyclones": "Iowa St.",
-    "IPFW Mastodons": "Fort Wayne",
     "Jackson State Tigers": "Jackson St.",
     "Jacksonville Dolphins": "Jacksonville",
     "Jacksonville State Gamecocks": "Jacksonville St.",
@@ -322,7 +328,6 @@ ESPN_TO_TORVIK = {
     "Utah Utes": "Utah",
     "Utah State Aggies": "Utah St.",
     "Utah Valley Wolverines": "Utah Valley",
-    "UCSB Gauchos": "UC Santa Barbara",
     "Valparaiso Beacons": "Valparaiso",
     "VCU Rams": "VCU",
     "Vermont Catamounts": "Vermont",
@@ -352,7 +357,7 @@ ESPN_TO_TORVIK = {
     "Youngstown State Penguins": "Youngstown St.",
 }
 
-# All D1 conferences
+# All D1 conferences — exact ESPN strings
 D1_CONFERENCES = [
     "ACC",
     "Big Ten Conference",
@@ -384,99 +389,202 @@ D1_CONFERENCES = [
     "Southland Conference",
 ]
 
+# Columns expected from cbbpy schedule output — used for validation
+EXPECTED_COLS = [
+    "game_id", "game_day", "game_time",
+    "team", "opponent", "season_type", "game_result",
+]
+
+
+# ── Helper functions ───────────────────────────────────────────────────────────
 
 def normalize_team_name(espn_name: str) -> str:
+    """Convert ESPN full team name to BartTorvik short name."""
     torvik_name = ESPN_TO_TORVIK.get(espn_name)
     if torvik_name is None:
-        print(f"  WARNING: No mapping for '{espn_name}'")
+        print(f"  WARNING: No ESPN→Torvik mapping for '{espn_name}' — using ESPN name as fallback")
     return torvik_name or espn_name
 
 
-def get_all_d1_teams(season: int) -> list:
+def clean_value(v):
+    """
+    Safely convert a value for Snowflake insertion.
+    Handles NaN, pandas NA, numpy bools, and regular Python types.
+    """
+    if v is None:
+        return None
+    if isinstance(v, float) and pd.isna(v):
+        return None
+    try:
+        if pd.isna(v):
+            return None
+    except (TypeError, ValueError):
+        pass
+    # Convert numpy/pandas bool types to Python bool
+    if type(v).__name__ in ("bool_", "bool"):
+        return bool(v)
+    return v
+
+
+def fetch_team_schedule_with_retry(team: str, season, max_retries: int = MAX_RETRIES):
+    """
+    Fetch a team's schedule with exponential backoff retry on failure.
+    Pass season=None to use cbbpy's current season default.
+    """
+    last_error = None
+    for attempt in range(max_retries):
+        try:
+            if season is None:
+                return cbb.get_team_schedule(team=team)
+            return cbb.get_team_schedule(team=team, season=season)
+        except Exception as e:
+            last_error = e
+            if attempt < max_retries - 1:
+                wait = 2 ** attempt  # 1s, 2s, 4s
+                time.sleep(wait)
+    raise last_error
+
+
+def get_all_d1_teams() -> list:
     """
     Dynamically fetch all D1 teams by pulling each conference's roster.
-    Returns a list of ESPN team name strings.
+    Logs any conference that fails rather than silently skipping it.
+    Returns a deduplicated list of ESPN team name strings.
     """
     all_teams = []
+    failed_conferences = []
+
     for conf in D1_CONFERENCES:
         try:
-            teams = cbb.get_teams_from_conference(conference=conf, season=season)
+            # Fixed — always pass explicit season year
+            teams = cbb.get_teams_from_conference(conference=conf)
             if teams:
                 all_teams.extend(teams)
             time.sleep(0.2)
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"  WARNING: Failed to fetch conference '{conf}': {e}")
+            failed_conferences.append(conf)
 
-    # Deduplicate
+    if failed_conferences:
+        print(f"  {len(failed_conferences)} conferences failed: {failed_conferences}")
+
     all_teams = list(set(all_teams))
-    print(f"  Found {len(all_teams)} D1 teams for season {season}")
+    print(f"  Found {len(all_teams)} D1 teams")
     return all_teams
 
 
+# ── Core ingestion functions ───────────────────────────────────────────────────
+
 def fetch_all_schedules(season: int) -> pd.DataFrame:
     """
-    Fetch season schedules for all D1 teams.
-    For the current season (2026) omit the season param so cbbpy
-    defaults to whatever is currently active.
+    Fetch completed game results for all D1 teams for a given season.
+    Uses retry logic per team and validates output before returning.
     """
+    # For current season (2026) omit season param so cbbpy uses its default
     is_current_season = (season == 2026)
+    schedule_season = None if is_current_season else season
 
-    if is_current_season:
-        # Get teams without season param for current season
-        teams = get_all_d1_teams(season=None)
-    else:
-        teams = get_all_d1_teams(season=season)
+    # Fixed — always pass the actual season year for conference lookup
+    teams = get_all_d1_teams() 
 
     all_games = []
-    failed = []
+    failed_teams = []
 
     for i, team in enumerate(teams):
         try:
-            if is_current_season:
-                schedule = cbb.get_team_schedule(team=team)
-            else:
-                schedule = cbb.get_team_schedule(team=team, season=season)
+            schedule = fetch_team_schedule_with_retry(
+                team=team,
+                season=schedule_season
+            )
 
-            if schedule is not None and not schedule.empty:
-                completed = schedule[
-                    schedule["game_result"].notna() &
-                    (schedule["game_result"] != "")
-                ].copy()
-                completed["season"] = season
-                all_games.append(completed)
-            time.sleep(0.3)
+            if schedule is None or schedule.empty:
+                continue
+
+            # Validate expected columns are present
+            missing_cols = [c for c in EXPECTED_COLS if c not in schedule.columns]
+            if missing_cols:
+                print(f"  WARNING: {team} schedule missing columns: {missing_cols}")
+
+            # Only keep completed games with a result string
+            completed = schedule[
+                schedule["game_result"].notna() &
+                (schedule["game_result"] != "")
+            ].copy()
+
+            if completed.empty:
+                continue
+
+            # Parse scores from result string e.g. "W 85-72" or "L 68-74 (OT)"
+            scores = completed["game_result"].str.extract(r'(\d+)-(\d+)')
+            completed["team_score"] = pd.to_numeric(scores[0], errors="coerce")
+            completed["opp_score"] = pd.to_numeric(scores[1], errors="coerce")
+            completed["result_flag"] = completed["game_result"].str[0]
+            completed["team_win"] = completed["result_flag"] == "W"
+
+            # Drop rows where score parsing failed
+            before = len(completed)
+            completed = completed[
+                completed["team_score"].notna() &
+                completed["opp_score"].notna()
+            ]
+            dropped = before - len(completed)
+            if dropped > 0:
+                print(f"  WARNING: Dropped {dropped} unparseable score rows for {team}")
+
+            completed["season"] = season
+            all_games.append(completed)
+
         except Exception as e:
-            failed.append(team)
+            print(f"  WARNING: Failed to fetch {team} season {season} after {MAX_RETRIES} retries: {e}")
+            failed_teams.append(team)
 
         if (i + 1) % 50 == 0:
             print(f"  Progress: {i + 1}/{len(teams)} teams")
 
-    if failed:
-        print(f"  {len(failed)} teams failed — check mappings if needed")
+        time.sleep(0.3)
+
+    if failed_teams:
+        print(f"  {len(failed_teams)} teams failed after all retries: {failed_teams}")
 
     if not all_games:
+        print(f"  No game data collected for season {season}")
         return pd.DataFrame()
 
     df = pd.concat(all_games, ignore_index=True)
 
-    # Parse scores from game_result e.g. "W 85-72"
-    df["result_flag"] = df["game_result"].str[0]
-    scores = df["game_result"].str.extract(r'(\d+)-(\d+)')
-    df["team_score"] = pd.to_numeric(scores[0], errors="coerce")
-    df["opp_score"] = pd.to_numeric(scores[1], errors="coerce")
-    df["team_win"] = df["result_flag"] == "W"
-
+    # Normalize team names to BartTorvik format
     df["team_torvik"] = df["team"].apply(normalize_team_name)
     df["opponent_torvik"] = df["opponent"].apply(normalize_team_name)
+
+    # Drop rows with null or empty game_id before deduplication
+    before = len(df)
+    df = df[df["game_id"].notna() & (df["game_id"].astype(str) != "")]
+    null_dropped = before - len(df)
+    if null_dropped > 0:
+        print(f"  Dropped {null_dropped} rows with null/empty game_id")
 
     # Deduplicate — each game appears in multiple teams' schedules
     df = df.drop_duplicates(subset=["game_id"])
 
-    print(f"  Season {season}: {len(df)} unique games from {len(teams)} teams")
+    print(f"  Season {season}: {len(df)} unique completed games from {len(teams)} teams")
+
+    # Safety check — abort load if suspiciously few games returned
+    if len(df) < MIN_EXPECTED_GAMES:
+        print(
+            f"  WARNING: Only {len(df)} games returned for season {season} "
+            f"(expected >= {MIN_EXPECTED_GAMES}). "
+            f"Skipping Snowflake load to protect existing data."
+        )
+        return pd.DataFrame()
+
     return df
 
 
 def load_to_snowflake(df: pd.DataFrame, season: int):
+    """
+    Load game results into RAW.CBB_GAME_RESULTS.
+    Deletes existing rows for the season before inserting fresh data.
+    """
     conn = snowflake.connector.connect(
         account=os.environ["SNOWFLAKE_ACCOUNT"],
         user=os.environ["SNOWFLAKE_USER"],
@@ -488,6 +596,7 @@ def load_to_snowflake(df: pd.DataFrame, season: int):
 
     cursor = conn.cursor()
 
+    # Create table if it doesn't exist
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS CBB_ANALYTICS.RAW.CBB_GAME_RESULTS (
             game_id          VARCHAR,
@@ -506,18 +615,25 @@ def load_to_snowflake(df: pd.DataFrame, season: int):
         )
     """)
 
+    # Delete existing rows for this season before reloading
     cursor.execute(f"""
         DELETE FROM CBB_ANALYTICS.RAW.CBB_GAME_RESULTS
         WHERE season = {season}
     """)
     print(f"  Deleted {cursor.rowcount} existing rows for season {season}")
 
-    cols = [
+    # Select only columns that exist in both the dataframe and our schema
+    target_cols = [
         "game_id", "season", "game_day", "game_time",
         "team", "team_torvik", "opponent", "opponent_torvik",
         "team_score", "opp_score", "team_win", "season_type",
     ]
-    cols = [c for c in cols if c in df.columns]
+    cols = [c for c in target_cols if c in df.columns]
+
+    missing_schema_cols = [c for c in target_cols if c not in df.columns]
+    if missing_schema_cols:
+        print(f"  WARNING: These expected columns are missing from data and will be null: {missing_schema_cols}")
+
     rows = df[cols].values.tolist()
 
     placeholders = ", ".join(["%s"] * len(cols))
@@ -531,30 +647,33 @@ def load_to_snowflake(df: pd.DataFrame, season: int):
     total = 0
     for i in range(0, len(rows), batch_size):
         batch = rows[i:i + batch_size]
-        clean_batch = [
-            [None if (isinstance(v, float) and pd.isna(v)) else v for v in row]
-            for row in batch
-        ]
+        # Clean all values for safe Snowflake insertion
+        clean_batch = [[clean_value(v) for v in row] for row in batch]
         cursor.executemany(insert_sql, clean_batch)
         total += len(batch)
 
     conn.commit()
     print(f"  Inserted {total} rows for season {season}")
+
     cursor.close()
     conn.close()
 
 
+# ── Entry point ────────────────────────────────────────────────────────────────
+
 def run():
-    seasons = [2024, 2025, 2026]
+    seasons = [2026]
     for season in seasons:
-        print(f"\nProcessing season {season}...")
+        print(f"\n{'='*50}")
+        print(f"Processing season {season}...")
+        print(f"{'='*50}")
         try:
             df = fetch_all_schedules(season)
             if df.empty:
-                print(f"  Skipping season {season} — no data")
+                print(f"  Skipping Snowflake load for season {season}")
                 continue
             load_to_snowflake(df, season)
-            print(f"  Season {season} complete")
+            print(f"  Season {season} complete ✓")
         except Exception as e:
             print(f"  ERROR for season {season}: {e}")
             raise

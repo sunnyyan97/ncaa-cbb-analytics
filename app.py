@@ -931,10 +931,10 @@ with tab5:
             ("Efficiency Margin", "consensus_adj_em", True, lambda v: f"{v:+.1f}"),
             ("Offense",           "kenpom_off_efficiency", True,  lambda v: f"{v:.1f}"),
             ("Defense",           "kenpom_def_efficiency", False, lambda v: f"{v:.1f}"),
-            ("Barthag",           "barthag",          True,  lambda v: f"{v:.3f}"),
             ("Starting Five BPM", "avg_bpm",          True,  lambda v: f"{v:+.2f}"),
             ("Experience",        "experienced_players", True, lambda v: f"{int(v)}/5 veterans"),
             ("Strength of Schedule", "sos",           True,  lambda v: f"{v:.3f}"),
+            ("Barthag",           "barthag",          True,  lambda v: f"{v:.3f}")
         ]
 
         for label, key, higher_better, fmt in metrics:
