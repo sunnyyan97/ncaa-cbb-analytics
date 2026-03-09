@@ -114,11 +114,19 @@ def predict_matchup(team_a: dict, team_b: dict, location: str = "neutral") -> di
                   team_b.get("torvik_def_efficiency", 100)) / 2
 
     # Each team's score accounts for both their offense and opponent's defense
+    # Location adjustment splits the 3.5pt home advantage
+    # half goes to boosting home offense, half to suppressing away offense
+    score_adj = {
+        "neutral": 0,
+        "home": 1.75,   # team_a is home — add to team_a, subtract from team_b
+        "away": -1.75   # team_a is away — subtract from team_a, add to team_b
+    }.get(location, 0)
+
     team_a_score = round(
-        ((team_a_off + team_b_def) / 2 / 100) * possessions, 1
+        ((team_a_off + team_b_def) / 2 / 100) * possessions + score_adj, 1
     )
     team_b_score = round(
-        ((team_b_off + team_a_def) / 2 / 100) * possessions, 1
+        ((team_b_off + team_a_def) / 2 / 100) * possessions - score_adj, 1
     )
 
     # Metric-by-metric breakdown — who has the edge on each dimension
