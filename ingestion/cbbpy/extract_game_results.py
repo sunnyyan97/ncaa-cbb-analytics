@@ -357,38 +357,6 @@ ESPN_TO_TORVIK = {
     "Youngstown State Penguins": "Youngstown St.",
 }
 
-# All D1 conferences — exact ESPN strings
-D1_CONFERENCES = [
-    "ACC",
-    "Big Ten Conference",
-    "Big 12 Conference",
-    "SEC",
-    "Big East Conference",
-    "American Athletic Conference",
-    "Atlantic 10 Conference",
-    "Mountain West Conference",
-    "West Coast Conference",
-    "Missouri Valley Conference",
-    "Mid-American Conference",
-    "Sun Belt Conference",
-    "Horizon League",
-    "Coastal Athletic Association",
-    "Southern Conference",
-    "Summit League",
-    "Big West Conference",
-    "Ivy League",
-    "Patriot League",
-    "America East Conference",
-    "Big South Conference",
-    "Northeast Conference",
-    "Ohio Valley Conference",
-    "Southwestern Athletic Conference",
-    "Mid-Eastern Athletic Conference",
-    "Western Athletic Conference",
-    "ASUN Conference",
-    "Southland Conference",
-]
-
 # Columns expected from cbbpy schedule output — used for validation
 EXPECTED_COLS = [
     "game_id", "game_day", "game_time",
@@ -445,47 +413,20 @@ def fetch_team_schedule_with_retry(team: str, season, max_retries: int = MAX_RET
     raise last_error
 
 
-def get_all_d1_teams() -> list:
-    """
-    Dynamically fetch all D1 teams by pulling each conference's roster.
-    Logs any conference that fails rather than silently skipping it.
-    Returns a deduplicated list of ESPN team name strings.
-    """
-    all_teams = []
-    failed_conferences = []
-
-    for conf in D1_CONFERENCES:
-        try:
-            # Fixed — always pass explicit season year
-            teams = cbb.get_teams_from_conference(conference=conf)
-            if teams:
-                all_teams.extend(teams)
-            time.sleep(0.2)
-        except Exception as e:
-            print(f"  WARNING: Failed to fetch conference '{conf}': {e}")
-            failed_conferences.append(conf)
-
-    if failed_conferences:
-        print(f"  {len(failed_conferences)} conferences failed: {failed_conferences}")
-
-    all_teams = list(set(all_teams))
-    print(f"  Found {len(all_teams)} D1 teams")
-    return all_teams
-
-
 # ── Core ingestion functions ───────────────────────────────────────────────────
 
 def fetch_all_schedules(season: int) -> pd.DataFrame:
     """
     Fetch completed game results for all D1 teams for a given season.
+    Team list is sourced directly from ESPN_TO_TORVIK mapping keys.
     Uses retry logic per team and validates output before returning.
     """
     # For current season (2026) omit season param so cbbpy uses its default
     is_current_season = (season == 2026)
     schedule_season = None if is_current_season else season
 
-    # Fixed — always pass the actual season year for conference lookup
-    teams = get_all_d1_teams() 
+    teams = list(ESPN_TO_TORVIK.keys())
+    print(f"  Using {len(teams)} teams from ESPN_TO_TORVIK mapping")
 
     all_games = []
     failed_teams = []
@@ -564,7 +505,7 @@ def fetch_all_schedules(season: int) -> pd.DataFrame:
         print(f"  Dropped {null_dropped} rows with null/empty game_id")
 
     # Deduplicate — each game appears in multiple teams' schedules
-    df = df.drop_duplicates(subset=["game_id"])
+    df = df.drop_duplicates(subset=["game_id", "season"])
 
     print(f"  Season {season}: {len(df)} unique completed games from {len(teams)} teams")
 

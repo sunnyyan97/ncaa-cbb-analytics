@@ -11,7 +11,7 @@ load_dotenv()
 
 # ─── Page Config ────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="NCAA Hoops Analytics",
+    page_title="College Basketball Analytics",
     page_icon="🏀",
     layout="wide",
     initial_sidebar_state="collapsed"
@@ -201,7 +201,7 @@ except Exception as e:
 # ─── Hero Header ─────────────────────────────────────────────────────────────
 st.markdown("""
 <div class="hero">
-    <h1>NCAA HOOPS <span>ANALYTICS</span></h1>
+    <h1>Sunny Yan College Basketball <span>ANALYTICS</span></h1>
     <p>2025–26 Season · KenPom + BartTorvik · Updated Daily</p>
 </div>
 """, unsafe_allow_html=True)
