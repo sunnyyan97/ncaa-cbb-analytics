@@ -68,64 +68,57 @@ def predict_matchup(team_a: dict, team_b: dict, location: str = "neutral") -> di
     Args:
         team_a: dict of team stats from fct_tournament_profile
         team_b: dict of team stats from fct_tournament_profile
-        location: 'neutral', 'home' (team_a), or 'away' (team_a)
+        location: 'neutral', 'home' (team_a at home), or 'away' (team_a away)
 
     Returns:
-        dict with win probabilities, predicted margin, and metric breakdown
+        dict with win probabilities, predicted scores, margin, and metric breakdown
     """
 
     # Location adjustment — home court worth ~3.5 points historically
     location_adjustment = {
         "neutral": 0,
-        "home": 3.5,    # team_a is at home
-        "away": -3.5    # team_a is away
+        "home":    3.5,   # team_a is at home
+        "away":   -3.5    # team_a is away
     }
     loc_adj = location_adjustment.get(location, 0)
 
-    # Core efficiency margin differential
+    # Core efficiency margin differential (includes location adjustment)
     em_diff = (
         team_a["consensus_adj_em"] - team_b["consensus_adj_em"] + loc_adj
     )
 
-    # Win probability from log5 formula
-    # Divisor of 15 calibrated to college basketball
+    # Win probability from log5 formula — divisor of 15 calibrated to college basketball
     win_prob_a = 1 / (1 + 10 ** (-em_diff / 15))
     win_prob_b = 1 - win_prob_a
 
-    # Predicted scores using tempo and efficiency
+    # --- Score prediction ---
+    # Tempo: average both teams' tempos, apply slight possession reduction
     avg_tempo = (
         team_a.get("kenpom_tempo", 68) + team_b.get("kenpom_tempo", 68)
     ) / 2
+    possessions = avg_tempo * 0.98
 
-    # Points = (offensive efficiency / 100) * possessions
-    possessions = avg_tempo * 0.98  # slight reduction for turnovers
+    # Average each team's offensive efficiency (consensus of KenPom + Torvik)
+    team_a_adj_o = (
+        team_a.get("kenpom_off_efficiency", 100) +
+        team_a.get("torvik_off_efficiency", 100)
+    ) / 2
+    team_b_adj_o = (
+        team_b.get("kenpom_off_efficiency", 100) +
+        team_b.get("torvik_off_efficiency", 100)
+    ) / 2
 
-    team_a_off = (team_a.get("kenpom_off_efficiency", 100) + 
-                  team_a.get("torvik_off_efficiency", 100)) / 2
-    team_a_def = (team_a.get("kenpom_def_efficiency", 100) + 
-                  team_a.get("torvik_def_efficiency", 100)) / 2
-    team_b_off = (team_b.get("kenpom_off_efficiency", 100) + 
-                  team_b.get("torvik_off_efficiency", 100)) / 2
-    team_b_def = (team_b.get("kenpom_def_efficiency", 100) + 
-                  team_b.get("torvik_def_efficiency", 100)) / 2
+    # Predicted margin derived directly from em_diff — this is the key fix.
+    # AdjEM is points per 100 possessions, so scaling to actual possessions
+    # gives us the expected point margin. This keeps margin internally consistent
+    # with win probability (both are anchored to em_diff).
+    predicted_margin = em_diff * (possessions / 100)
 
-    # Each team's score accounts for both their offense and opponent's defense
-    # Location adjustment splits the 3.5pt home advantage
-    # half goes to boosting home offense, half to suppressing away offense
-    score_adj = {
-        "neutral": 0,
-        "home": 1.75,   # team_a is home — add to team_a, subtract from team_b
-        "away": -1.75   # team_a is away — subtract from team_a, add to team_b
-    }.get(location, 0)
-
-    team_a_score = round(
-        ((team_a_off + team_b_def) / 2 / 100) * possessions + score_adj, 1
-    )
-    team_b_score = round(
-        ((team_b_off + team_a_def) / 2 / 100) * possessions - score_adj, 1
-    )
-
-    predicted_margin = team_a_score - team_b_score
+    # Baseline score: average of both teams' offensive efficiencies sets the
+    # overall scoring level for the game, then split the margin around it.
+    baseline_score = ((team_a_adj_o + team_b_adj_o) / 2) / 100 * possessions
+    team_a_score = round(baseline_score + predicted_margin / 2, 1)
+    team_b_score = round(baseline_score - predicted_margin / 2, 1)
 
     # Metric-by-metric breakdown — who has the edge on each dimension
     breakdown = {
@@ -136,16 +129,19 @@ def predict_matchup(team_a: dict, team_b: dict, location: str = "neutral") -> di
             "diff": abs(round(em_diff - loc_adj, 1))
         },
         "Offense": {
-            "team_a": round(team_a_off, 1),
-            "team_b": round(team_b_off, 1),
-            "edge": team_a["team_name"] if team_a_off > team_b_off else team_b["team_name"],
-            "diff": abs(round(team_a_off - team_b_off, 1))
+            "team_a": round(team_a_adj_o, 1),
+            "team_b": round(team_b_adj_o, 1),
+            "edge": team_a["team_name"] if team_a_adj_o > team_b_adj_o else team_b["team_name"],
+            "diff": abs(round(team_a_adj_o - team_b_adj_o, 1))
         },
         "Defense": {
-            "team_a": round(team_a_def, 1),
-            "team_b": round(team_b_def, 1),
-            "edge": team_a["team_name"] if team_a_def < team_b_def else team_b["team_name"],
-            "diff": abs(round(team_a_def - team_b_def, 1))
+            "team_a": round((team_a.get("kenpom_def_efficiency", 100) + team_a.get("torvik_def_efficiency", 100)) / 2, 1),
+            "team_b": round((team_b.get("kenpom_def_efficiency", 100) + team_b.get("torvik_def_efficiency", 100)) / 2, 1),
+            "edge": team_a["team_name"] if (team_a.get("kenpom_def_efficiency", 100) + team_a.get("torvik_def_efficiency", 100)) < (team_b.get("kenpom_def_efficiency", 100) + team_b.get("torvik_def_efficiency", 100)) else team_b["team_name"],
+            "diff": abs(round(
+                ((team_a.get("kenpom_def_efficiency", 100) + team_a.get("torvik_def_efficiency", 100)) -
+                 (team_b.get("kenpom_def_efficiency", 100) + team_b.get("torvik_def_efficiency", 100))) / 2, 1
+            ))
         },
         "Barthag": {
             "team_a": round(team_a.get("barthag", 0), 3),
@@ -192,16 +188,16 @@ if __name__ == "__main__":
     df = get_all_team_stats()
     teams = df.set_index("team_name").to_dict("index")
 
-# Re-add team_name as a field inside each dict
     for team_name, stats in teams.items():
         stats["team_name"] = team_name
 
     result = predict_matchup(teams["Duke"], teams["Michigan"])
 
     print(f"\n{result['team_a']} vs {result['team_b']}")
-    print(f"Predicted winner: {result['predicted_winner']}")
-    print(f"Predicted score: {result['team_a_score']} - {result['team_b_score']}")
-    print(f"Win probability: {result['team_a']} {result['team_a_win_prob']*100:.1f}% / {result['team_b']} {result['team_b_win_prob']*100:.1f}%")
+    print(f"Predicted winner:  {result['predicted_winner']}")
+    print(f"Predicted score:   {result['team_a_score']} - {result['team_b_score']}")
+    print(f"Predicted margin:  {result['predicted_margin']} pts")
+    print(f"Win probability:   {result['team_a']} {result['team_a_win_prob']*100:.1f}% / {result['team_b']} {result['team_b_win_prob']*100:.1f}%")
     print(f"\nMetric breakdown:")
     for metric, values in result['breakdown'].items():
         print(f"  {metric}: {values['team_a']} vs {values['team_b']} → Edge: {values['edge']} (+{values['diff']})")
