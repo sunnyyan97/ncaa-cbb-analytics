@@ -406,6 +406,8 @@ with tab1:
     st.markdown('<div class="section-sub">KenPom AdjEM vs BartTorvik AdjEM for top 25 — large gaps indicate disagreement between models</div>', unsafe_allow_html=True)
 
     top25 = df.head(25).copy()
+    top25["kenpom_adj_em"] = top25["kenpom_adj_em"].round(1)
+    top25["torvik_adj_em"] = top25["torvik_adj_em"].round(1)
     fig_compare = go.Figure()
 
     # Add connecting lines between KenPom and Torvik dots
@@ -426,7 +428,7 @@ with tab1:
         mode="markers",
         name="KenPom",
         marker=dict(color="#c8a96e", size=12, symbol="circle"),
-        hovertemplate="<b>%{y}</b><br>KenPom AdjEM: %{x:+.2f}<extra></extra>"
+        hovertemplate="<b>%{y}</b><br>KenPom AdjEM: %{x:+.1f}<extra></extra>"
     ))
 
     # BartTorvik dots
@@ -436,7 +438,7 @@ with tab1:
         mode="markers",
         name="BartTorvik",
         marker=dict(color="#e8532a", size=12, symbol="diamond"),
-        hovertemplate="<b>%{y}</b><br>Torvik AdjEM: %{x:+.2f}<extra></extra>"
+        hovertemplate="<b>%{y}</b><br>Torvik AdjEM: %{x:+.1f}<extra></extra>"
     ))
 
     # Disagreement labels — show gap where models differ by more than 2 points
@@ -555,9 +557,9 @@ with tab2:
         hovertemplate=(
             "<b>%{customdata[0]}</b> (%{customdata[1]})<br>"
             "Record: %{customdata[2]}<br>"
-            f"{x_label.split('.')[0]}: %{{x:.1f}}<br>"
-            f"{y_label.split('.')[0]}: %{{y:.1f}}<br>"
             "Consensus AdjEM: %{customdata[3]:+.2f}<br>"
+            "Adj. Offense: %{x:.1f}<br>"
+            "Adj. Defense: %{y:.1f}<br>"
             "WAB: %{customdata[4]:.1f}<extra></extra>"
         )
     ))
