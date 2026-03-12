@@ -935,14 +935,20 @@ with tab5:
         st.markdown('<hr style="border-color:#1f2937;margin:1.5rem 0">', unsafe_allow_html=True)
         st.markdown('<div class="section-label">METRIC BREAKDOWN</div>', unsafe_allow_html=True)
 
+        METRIC_TOOLTIPS = {
+            "Consensus AdjEM":     "Consensus of KenPom and BartTorvik's Adjusted Efficiency Margin — net points per 100 possessions after adjusting for opponent strength. The single best predictor of tournament success. Top teams typically sit above +20.",
+            "Starting Five BPM":   "Average BPM across the top 5 players by minutes. BPM estimates each player's value in points per 100 possessions above a D1-average player. +2 is solid starter, +5 is All-American, negative means below average.",
+            "Barthag":             "BartTorvik's power rating — the estimated probability of beating an average D1 team on a neutral court. Ranges from 0 to 1; elite teams typically sit above 0.95.",
+        }
+
         metrics = [
-            ("Consensus AdjEM", "consensus_adj_em", True, lambda v: f"{v:+.1f}"),
-            ("Offense",           "kenpom_off_efficiency", True,  lambda v: f"{v:.1f}"),
-            ("Defense",           "kenpom_def_efficiency", False, lambda v: f"{v:.1f}"),
-            ("Starting Five BPM", "avg_bpm",          True,  lambda v: f"{v:+.2f}"),
-            ("Experience",        "experienced_players", True, lambda v: f"{int(v)}/5 veterans"),
-            ("Strength of Schedule", "sos",           True,  lambda v: f"{v:.3f}"),
-            ("Barthag",           "barthag",          True,  lambda v: f"{v:.3f}")
+            ("Consensus AdjEM",       "consensus_adj_em",      True,  lambda v: f"{v:+.1f}"),
+            ("Offensive Efficiency",  "kenpom_off_efficiency",  True,  lambda v: f"{v:.1f}"),
+            ("Defensive Efficiency",  "kenpom_def_efficiency",  False, lambda v: f"{v:.1f}"),
+            ("Starting Five BPM",     "avg_bpm",                True,  lambda v: f"{v:+.2f}"),
+            ("Experience",            "experienced_players",    True,  lambda v: f"{int(v)}/5 upperclassmen"),
+            ("Strength of Schedule",  "sos",                    True,  lambda v: f"{v:.3f}"),
+            ("Barthag",               "barthag",                True,  lambda v: f"{v:.3f}"),
         ]
 
         for label, key, higher_better, fmt in metrics:
@@ -961,11 +967,19 @@ with tab5:
                 </div>
                 """, unsafe_allow_html=True)
             with col_m2:
-                st.markdown(f"""
-                <div style="text-align:center;padding:0.45rem 0;font-size:1.11rem;color:#4b5563;text-transform:uppercase;letter-spacing:0.07em">
-                    {label}
-                </div>
-                """, unsafe_allow_html=True)
+                # Always use same [3,1] split so labels are consistently anchored
+                lbl_col, ico_col = st.columns([3, 1])
+                with lbl_col:
+                    st.markdown(f"""
+                    <div style="text-align:center;padding:0.45rem 0;font-size:1.11rem;color:#4b5563;text-transform:uppercase;letter-spacing:0.07em">
+                        {label}
+                    </div>
+                    """, unsafe_allow_html=True)
+                with ico_col:
+                    tooltip = METRIC_TOOLTIPS.get(label)
+                    if tooltip:
+                        with st.popover("ⓘ"):
+                            st.markdown(f"<span style='font-size:0.8rem;color:#9ca3af'>{tooltip}</span>", unsafe_allow_html=True)
             with col_m3:
                 color_b = "#c8a96e" if (not edge_a and not tied) else "#6b7280"
                 arrow_b = " ◀" if (not edge_a and not tied) else ""

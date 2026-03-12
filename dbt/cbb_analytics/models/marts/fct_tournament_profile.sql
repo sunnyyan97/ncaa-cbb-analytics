@@ -59,7 +59,7 @@ starting_five as (
 
         -- experience metric — useful tournament predictor
         count(case when minutes_rank <= 5
-              and eligibility in ('Sr', 'Gr') then 1 end)        as experienced_players
+              and eligibility in ('Jr', 'Sr', 'Gr') then 1 end)        as experienced_players
 
     from top_players
     where minutes_rank <= 5
