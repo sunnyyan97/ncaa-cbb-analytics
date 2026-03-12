@@ -6,12 +6,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-def get_all_team_stats() -> pd.DataFrame:
-    """
-    Pull current season team stats from fct_tournament_profile.
-    Returns one row per team with all metrics needed for prediction.
-    """
-    conn = snowflake.connector.connect(
+def get_connection():
+    return snowflake.connector.connect(
         account=os.environ["SNOWFLAKE_ACCOUNT"],
         user=os.environ["SNOWFLAKE_USER"],
         password=os.environ["SNOWFLAKE_PASSWORD"],
@@ -20,6 +16,13 @@ def get_all_team_stats() -> pd.DataFrame:
         schema=os.environ.get("SNOWFLAKE_SCHEMA", "DEV_MARTS"),
     )
 
+
+def get_all_team_stats() -> pd.DataFrame:
+    """
+    Pull current season team stats from fct_tournament_profile.
+    Returns one row per team with all metrics needed for prediction.
+    """
+    conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
         SELECT
@@ -62,19 +65,10 @@ def get_all_team_stats() -> pd.DataFrame:
 
 def get_top5_by_team(team_name: str) -> pd.DataFrame:
     """
-    Pull the top 5 players by minutes percentage for a given team, current season.
-    Returns a DataFrame with one row per player, ordered by minutes_pct desc.
-    Returns an empty DataFrame gracefully if the team has no qualifying players.
+    Pull the top 5 players by minutes for a given team from fct_player_stats.
+    Minimum 10 games played. Returns one row per player sorted by minutes descending.
     """
-    conn = snowflake.connector.connect(
-        account=os.environ["SNOWFLAKE_ACCOUNT"],
-        user=os.environ["SNOWFLAKE_USER"],
-        password=os.environ["SNOWFLAKE_PASSWORD"],
-        warehouse=os.environ.get("SNOWFLAKE_WAREHOUSE", "COMPUTE_WH"),
-        database=os.environ.get("SNOWFLAKE_DATABASE", "CBB_ANALYTICS"),
-        schema=os.environ.get("SNOWFLAKE_SCHEMA", "DEV_MARTS"),
-    )
-
+    conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
         SELECT
@@ -154,7 +148,7 @@ def predict_matchup(team_a: dict, team_b: dict, location: str = "neutral") -> di
         team_b.get("torvik_off_efficiency", 100)
     ) / 2
 
-    # Predicted margin derived directly from em_diff — this is the key fix.
+    # Predicted margin derived directly from em_diff.
     # AdjEM is points per 100 possessions, so scaling to actual possessions
     # gives us the expected point margin. This keeps margin internally consistent
     # with win probability (both are anchored to em_diff).
@@ -247,3 +241,6 @@ if __name__ == "__main__":
     print(f"\nMetric breakdown:")
     for metric, values in result['breakdown'].items():
         print(f"  {metric}: {values['team_a']} vs {values['team_b']} → Edge: {values['edge']} (+{values['diff']})")
+
+    print(f"\nTop 5 players — Duke:")
+    print(get_top5_by_team("Duke").to_string(index=False))
