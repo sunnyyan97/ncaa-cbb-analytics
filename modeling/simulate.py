@@ -11,8 +11,9 @@ FIRST_ROUND_SEED_ORDER = [1, 16, 8, 9, 5, 12, 4, 13, 6, 11, 3, 14, 7, 10, 2, 15]
 ROUND_NAMES = ["R64", "R32", "S16", "E8", "F4", "Championship"]
 
 # Standard NCAA bracket region pairings for the Final Four
-# East champion plays West champion, South plays Midwest
-FINAL_FOUR_PAIRINGS = [(0, 1), (2, 3)]  # indices into [East, West, South, Midwest]
+# South champion plays West champion, East champion plays Midwest champion.
+# Indices reference REGION_ORDER below: East=0, West=1, South=2, Midwest=3
+FINAL_FOUR_PAIRINGS = [(2, 1), (0, 3)]  # (South vs West), (East vs Midwest)
 REGION_ORDER = ["East", "West", "South", "Midwest"]
 
 

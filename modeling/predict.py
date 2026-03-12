@@ -60,6 +60,52 @@ def get_all_team_stats() -> pd.DataFrame:
     return pd.DataFrame(results, columns=columns)
 
 
+def get_top5_by_team(team_name: str) -> pd.DataFrame:
+    """
+    Pull the top 5 players by minutes percentage for a given team, current season.
+    Returns a DataFrame with one row per player, ordered by minutes_pct desc.
+    Returns an empty DataFrame gracefully if the team has no qualifying players.
+    """
+    conn = snowflake.connector.connect(
+        account=os.environ["SNOWFLAKE_ACCOUNT"],
+        user=os.environ["SNOWFLAKE_USER"],
+        password=os.environ["SNOWFLAKE_PASSWORD"],
+        warehouse=os.environ.get("SNOWFLAKE_WAREHOUSE", "COMPUTE_WH"),
+        database=os.environ.get("SNOWFLAKE_DATABASE", "CBB_ANALYTICS"),
+        schema=os.environ.get("SNOWFLAKE_SCHEMA", "DEV_MARTS"),
+    )
+
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT
+            player_name,
+            position,
+            eligibility,
+            pts_per_game,
+            reb_per_game,
+            ast_per_game,
+            bpm,
+            obpm,
+            dbpm,
+            ts_pct,
+            usage_pct,
+            minutes_pct
+        FROM CBB_ANALYTICS.DEV_MARTS.FCT_PLAYER_STATS
+        WHERE team_name = %s
+          AND season = 2026
+          AND games >= 10
+        ORDER BY minutes_pct DESC
+        LIMIT 5
+    """, (team_name,))
+
+    results = cursor.fetchall()
+    columns = [col[0].lower() for col in cursor.description]
+    cursor.close()
+    conn.close()
+
+    return pd.DataFrame(results, columns=columns)
+
+
 def predict_matchup(team_a: dict, team_b: dict, location: str = "neutral") -> dict:
     """
     Predict the outcome of a matchup between two teams using

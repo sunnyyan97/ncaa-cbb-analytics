@@ -1,11 +1,14 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import snowflake.connector
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import os
 from dotenv import load_dotenv
-from modeling.predict import get_all_team_stats, predict_matchup
+from modeling.predict import get_all_team_stats, predict_matchup, get_top5_by_team
+import bracket_data
+from render_bracket import render_bracket_html
 
 load_dotenv()
 
@@ -191,6 +194,10 @@ def load_team_stats():
         stats["team_name"] = team_name
     return teams
 
+@st.cache_data(ttl=3600)
+def load_top5(team_name: str) -> pd.DataFrame:
+    return get_top5_by_team(team_name)
+
 # ─── Load Data ───────────────────────────────────────────────────────────────
 try:
     df = load_data()
@@ -300,13 +307,38 @@ PLOT_LAYOUT = dict(
 )
 
 # ─── Tabs ─────────────────────────────────────────────────────────────────────
-tab5, tab1, tab2, tab3, tab4 = st.tabs([
+tab_bracket, tab5, tab1, tab2, tab3, tab4 = st.tabs([
+    "🏆  Bracket Simulator",
     "🏀  Matchup Predictor",
     "📊  Efficiency Rankings",
     "⚡  Offense vs Defense",
     "👥  Starting Five",
     "🎯  WAB vs SOS",
 ])
+
+# ── Bracket Simulator Tab ─────────────────────────────────────────────────────
+with tab_bracket:
+    if not bracket_data.BRACKET_LOCKED:
+        st.markdown("""
+        <div style="
+            background:#111827;border:1px solid #1f2937;border-radius:12px;
+            padding:4rem 2rem;text-align:center;margin-top:1rem
+        ">
+            <div style="font-family:'Bebas Neue';font-size:3.5rem;color:#1f2937;letter-spacing:0.1em">
+                BRACKET PENDING
+            </div>
+            <div style="font-family:'Bebas Neue';font-size:1.4rem;color:#c8a96e;margin-top:0.5rem">
+                Selection Sunday · March 15, 2026
+            </div>
+            <div style="color:#4b5563;font-size:0.85rem;margin-top:1rem;max-width:420px;margin-left:auto;margin-right:auto">
+                The 68-team bracket will be announced on Selection Sunday.
+                The simulator will go live once the bracket is loaded.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        bracket_html = render_bracket_html()
+        components.html(bracket_html, height=1800, scrolling=True)
 
 # ── Tab 1: Efficiency Bar Chart ───────────────────────────────────────────────
 with tab1:
@@ -966,6 +998,67 @@ with tab5:
                     {fmt(val_b)}{arrow_b}
                 </div>
                 """, unsafe_allow_html=True)
+
+        # ── Starting Five Tables ──────────────────────────────────────
+        st.markdown('<hr style="border-color:#1f2937;margin:1.5rem 0">', unsafe_allow_html=True)
+        st.markdown('<div class="section-label">STARTING FIVE</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-sub">Top 5 players by minutes · min 10 games played · Sorted by minutes played</div>', unsafe_allow_html=True)
+
+        p5_cols = st.columns(2)
+
+        for col, team_name in zip(p5_cols, [team_a_name, team_b_name]):
+            with col:
+                st.markdown(
+                    f'<div style="font-family:\'Bebas Neue\';font-size:1rem;color:#c8a96e;'
+                    f'letter-spacing:0.1em;margin-bottom:0.5rem">{team_name}</div>',
+                    unsafe_allow_html=True
+                )
+                df_p5 = load_top5(team_name)
+
+                if df_p5.empty:
+                    st.markdown(
+                        '<div style="font-size:0.8rem;color:#4b5563;padding:0.5rem 0">'
+                        'No player data available.</div>',
+                        unsafe_allow_html=True
+                    )
+                else:
+                    # Format for display
+                    display = df_p5[[
+                        "player_name", "position", "eligibility",
+                        "pts_per_game", "reb_per_game", "ast_per_game",
+                        "bpm", "ts_pct", "usage_pct"
+                    ]].copy().rename(columns={
+                        "player_name": "Player",
+                        "position":    "Pos",
+                        "eligibility": "Yr",
+                        "pts_per_game": "PTS",
+                        "reb_per_game": "REB",
+                        "ast_per_game": "AST",
+                        "bpm":          "BPM",
+                        "ts_pct":       "TS%",
+                        "usage_pct":    "USG%",
+                    })
+                    # Convert TS% and USG% to 0–100 scale if stored as decimals
+                    for col_name in ["TS%", "USG%"]:
+                        if display[col_name].dropna().max() <= 1.0:
+                            display[col_name] = (display[col_name] * 100).round(1)
+                        else:
+                            display[col_name] = display[col_name].round(1)
+
+                    st.dataframe(
+                        display,
+                        hide_index=True,
+                        use_container_width=True,
+                        column_config={
+                            "Player": st.column_config.TextColumn("Player", width="medium"),
+                            "PTS":    st.column_config.NumberColumn("PTS",  format="%.1f"),
+                            "REB":    st.column_config.NumberColumn("REB",  format="%.1f"),
+                            "AST":    st.column_config.NumberColumn("AST",  format="%.1f"),
+                            "BPM":    st.column_config.NumberColumn("BPM",  format="%+.2f"),
+                            "TS%":    st.column_config.NumberColumn("TS%",  format="%.1f%%"),
+                            "USG%":   st.column_config.NumberColumn("USG%", format="%.1f%%"),
+                        }
+                    )
 
         # ── Model note ────────────────────────────────────────────────
         st.markdown("""
