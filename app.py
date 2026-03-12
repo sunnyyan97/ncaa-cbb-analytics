@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import snowflake.connector
 import pandas as pd
 import plotly.express as px
@@ -6,6 +7,7 @@ import plotly.graph_objects as go
 import os
 from dotenv import load_dotenv
 from modeling.predict import get_all_team_stats, predict_matchup
+from render_bracket import render_bracket_html
 
 load_dotenv()
 
@@ -191,6 +193,11 @@ def load_team_stats():
         stats["team_name"] = team_name
     return teams
 
+@st.cache_data(ttl=3600)
+def load_top5(team_name: str):
+    from modeling.predict import get_top5_by_team
+    return get_top5_by_team(team_name)
+
 # ─── Load Data ───────────────────────────────────────────────────────────────
 try:
     df = load_data()
@@ -300,7 +307,8 @@ PLOT_LAYOUT = dict(
 )
 
 # ─── Tabs ─────────────────────────────────────────────────────────────────────
-tab5, tab1, tab2, tab3, tab4 = st.tabs([
+tab6, tab5, tab1, tab2, tab3, tab4 = st.tabs([
+    "🏆  Bracket Simulator",
     "🏀  Matchup Predictor",
     "📊  Efficiency Rankings",
     "⚡  Offense vs Defense",
@@ -967,6 +975,54 @@ with tab5:
                 </div>
                 """, unsafe_allow_html=True)
 
+        # ── Starting Five ─────────────────────────────────────────────
+        st.markdown('<hr style="border-color:#1f2937;margin:1.5rem 0">', unsafe_allow_html=True)
+        st.markdown('<div class="section-label">STARTING FIVE</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-sub">Top 5 players by minutes · min 10 games played · Sorted by minutes played</div>', unsafe_allow_html=True)
+
+        p5_col1, p5_col2 = st.columns(2)
+
+        for col, team_name in [(p5_col1, team_a_name), (p5_col2, team_b_name)]:
+            with col:
+                st.markdown(f"<div style='font-size:0.75rem;color:#c8a96e;font-family:\"Bebas Neue\";letter-spacing:0.1em;margin-bottom:0.5rem'>{team_name}</div>", unsafe_allow_html=True)
+                try:
+                    p5_df = load_top5(team_name)
+                    if p5_df.empty:
+                        st.markdown("<div style='font-size:0.75rem;color:#4b5563'>No player data available.</div>", unsafe_allow_html=True)
+                    else:
+                        # Convert decimals to percentages where needed
+                        for pct_col in ["ts_pct", "usage_pct"]:
+                            if pct_col in p5_df.columns:
+                                p5_df[pct_col] = p5_df[pct_col].apply(
+                                    lambda x: round(x * 100, 1) if x is not None and x <= 1 else round(x, 1) if x is not None else None
+                                )
+                        display_df = p5_df[["player_name", "position", "eligibility", "pts_per_game", "reb_per_game", "ast_per_game", "bpm", "ts_pct", "usage_pct"]].rename(columns={
+                            "player_name": "Player",
+                            "position":    "Pos",
+                            "eligibility": "Yr",
+                            "pts_per_game": "PTS",
+                            "reb_per_game": "REB",
+                            "ast_per_game": "AST",
+                            "bpm":          "BPM",
+                            "ts_pct":       "TS%",
+                            "usage_pct":    "USG%",
+                        })
+                        st.dataframe(
+                            display_df,
+                            hide_index=True,
+                            use_container_width=True,
+                            column_config={
+                                "BPM":  st.column_config.NumberColumn("BPM",  format="%+.2f"),
+                                "TS%":  st.column_config.NumberColumn("TS%",  format="%.1f%%"),
+                                "USG%": st.column_config.NumberColumn("USG%", format="%.1f%%"),
+                                "PTS":  st.column_config.NumberColumn("PTS",  format="%.1f"),
+                                "REB":  st.column_config.NumberColumn("REB",  format="%.1f"),
+                                "AST":  st.column_config.NumberColumn("AST",  format="%.1f"),
+                            }
+                        )
+                except Exception:
+                    st.markdown("<div style='font-size:0.75rem;color:#4b5563'>No player data available.</div>", unsafe_allow_html=True)
+
         # ── Model note ────────────────────────────────────────────────
         st.markdown("""
         <div style="margin-top:2rem;padding:0.75rem 1rem;background:#0f1520;border-radius:8px;border-left:3px solid #1f2937">
@@ -978,6 +1034,14 @@ with tab5:
             </span>
         </div>
         """, unsafe_allow_html=True)
+
+# ── Tab 6: Bracket Simulator ──────────────────────────────────────────────────
+with tab6:
+    try:
+        bracket_html = render_bracket_html()
+        components.html(bracket_html, height=1800, scrolling=True)
+    except Exception as e:
+        st.error(f"Could not render bracket: {e}")
 
 # ─── Footer ───────────────────────────────────────────────────────────────────
 st.markdown("""
