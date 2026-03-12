@@ -602,7 +602,7 @@ with tab3:
             ["All"] + sorted(df["conference"].dropna().unique().tolist()),
             key="tbl_conf"
         )
-        top_n = st.slider("Teams to show", 10, len(df), 30, key="tbl_n")
+        top_n = st.slider("Teams to show", 10, len(df), 50, key="tbl_n")
 
     tbl = df.copy()
     if conf_t != "All":
@@ -625,7 +625,7 @@ with tab3:
         "avg_ts_pct": "Avg TS%",
         "avg_efg_pct": "Avg eFG%",
         "avg_three_pt_pct": "Avg 3P%",
-        "experienced_players": "Veterans",
+        "experienced_players": "Upperclassmen",
     }
 
     tbl_display = tbl[list(display_cols.keys())].rename(columns=display_cols)
@@ -657,40 +657,6 @@ with tab3:
         }
     )
 
-
-    # Experience breakdown
-    st.markdown('<hr class="divider">', unsafe_allow_html=True)
-    st.markdown('<div class="section-label">EXPERIENCE INDEX</div>', unsafe_allow_html=True)
-    st.markdown('<div class="section-sub">Number of veterans (Sr/Gr) in the top 5 by minutes — higher experience correlates with tournament success</div>', unsafe_allow_html=True)
-
-    exp_df = df.nlargest(25, "experienced_players")[["team_name", "experienced_players", "consensus_adj_em", "wins_above_bubble"]].copy()
-
-    fig_exp = go.Figure(go.Bar(
-        x=exp_df["experienced_players"],
-        y=exp_df["team_name"],
-        orientation="h",
-        marker_color="#c8a96e",
-        marker_opacity=0.85,
-        text=exp_df["experienced_players"],
-        textposition="outside",
-        textfont=dict(color="#f0ede6", size=11),
-        customdata=exp_df[["consensus_adj_em", "wins_above_bubble"]].values,
-        hovertemplate=(
-            "<b>%{y}</b><br>"
-            "Veterans in Top 5: %{x}<br>"
-            "AdjEM: %{customdata[0]:+.2f}<br>"
-            "WAB: %{customdata[1]:.1f}<extra></extra>"
-        )
-    ))
-    fig_exp.update_layout(
-        **PLOT_LAYOUT,
-        height=600,
-        title="MOST EXPERIENCED STARTING FIVES",
-        xaxis_title="Veterans (Sr/Gr) in Top 5 by Minutes",
-        yaxis=dict(autorange="reversed", gridcolor="#1f2937"),
-        showlegend=False,
-    )
-    st.plotly_chart(fig_exp, width="stretch")
 
 # ── Tab 4: WAB vs SOS ────────────────────────────────────────────────────────
 with tab4:
@@ -936,9 +902,10 @@ with tab5:
         st.markdown('<div class="section-label">METRIC BREAKDOWN</div>', unsafe_allow_html=True)
 
         METRIC_TOOLTIPS = {
-            "Consensus AdjEM":     "Consensus of KenPom and BartTorvik's Adjusted Efficiency Margin — net points per 100 possessions after adjusting for opponent strength. The single best predictor of tournament success. Top teams typically sit above +20.",
-            "Starting Five BPM":   "Average BPM across the top 5 players by minutes. BPM estimates each player's value in points per 100 possessions above a D1-average player. +2 is solid starter, +5 is All-American, negative means below average.",
-            "Barthag":             "BartTorvik's power rating — the estimated probability of beating an average D1 team on a neutral court. Ranges from 0 to 1; elite teams typically sit above 0.95.",
+            "Consensus AdjEM":       "Consensus of KenPom and BartTorvik's Adjusted Efficiency Margin — net points per 100 possessions after adjusting for opponent strength. The single best predictor of tournament success. Top teams typically sit above +20.",
+            "Starting Five BPM":     "Average BPM across the top 5 players by minutes. BPM estimates each player's value in points per 100 possessions above a D1-average player. +2 is solid starter, +5 is All-American, negative means below average.",
+            "Strength of Schedule":  "Average Barthag of all opponents faced — expressed on a 0 to 1 scale. A value of 0.789 means opponents averaged a 78.9% chance of beating an average D1 team. Higher means a tougher schedule.",
+            "Barthag":               "BartTorvik's power rating — the estimated probability of beating an average D1 team on a neutral court. Ranges from 0 to 1; elite teams typically sit above 0.95.",
         }
 
         metrics = [

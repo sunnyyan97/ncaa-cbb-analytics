@@ -79,6 +79,7 @@ final as (
         null::integer        as tournament_seed,
         null::varchar        as tournament_region,
         false                as is_tournament_team,
+        'not_in_tournament'::varchar as tournament_status,
 
         -- kenpom metrics
         t.kenpom_adj_em,
