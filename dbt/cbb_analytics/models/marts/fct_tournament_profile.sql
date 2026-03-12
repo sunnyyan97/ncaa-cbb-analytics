@@ -75,11 +75,12 @@ final as (
         t.season,
         t.record,
 
-        -- tournament placeholders (to be filled after Selection Sunday)
-        null::integer        as tournament_seed,
-        null::varchar        as tournament_region,
-        false                as is_tournament_team,
-        'not_in_tournament'::varchar as tournament_status,
+        -- tournament fields — populated from RAW.TOURNAMENT_SEEDS after Selection Sunday
+        s.seed                                              as tournament_seed,
+        s.region                                            as tournament_region,
+        case when s.seed is not null then true
+             else false end                                 as is_tournament_team,
+        coalesce(s.status, 'not_in_tournament')             as tournament_status,
 
         -- kenpom metrics
         t.kenpom_adj_em,
@@ -143,6 +144,9 @@ final as (
     left join starting_five p
         on t.team_name = p.team_name
         and t.season = p.season
+    left join CBB_ANALYTICS.RAW.TOURNAMENT_SEEDS s
+        on t.team_name = s.team_name
+        and t.season   = s.season
 )
 
 select * from final

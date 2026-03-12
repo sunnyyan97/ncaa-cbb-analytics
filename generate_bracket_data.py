@@ -16,9 +16,58 @@ SEED_ORDER reference (always 1v16, 8v9, 5v12, 4v13, 6v11, 3v14, 7v10, 2v15):
 
 import time
 import textwrap
+import os
+import snowflake.connector
 from pathlib import Path
+from dotenv import load_dotenv
 from modeling.predict import get_all_team_stats, predict_matchup
 from simulate import simulate_tournament, get_team_safe
+
+load_dotenv()
+
+SEASON = 2026
+
+
+def write_seeds_to_snowflake(bracket: dict) -> None:
+    """
+    Truncate and repopulate CBB_ANALYTICS.RAW.TOURNAMENT_SEEDS with the
+    68 tournament teams, their seeds, regions, and initial status='active'.
+    Called after BRACKET_INPUT has been validated and the script is running.
+    """
+    conn = snowflake.connector.connect(
+        account=os.environ["SNOWFLAKE_ACCOUNT"],
+        user=os.environ["SNOWFLAKE_USER"],
+        password=os.environ["SNOWFLAKE_PASSWORD"],
+        warehouse=os.environ.get("SNOWFLAKE_WAREHOUSE", "COMPUTE_WH"),
+        database=os.environ.get("SNOWFLAKE_DATABASE", "CBB_ANALYTICS"),
+        schema="RAW",
+    )
+    cursor = conn.cursor()
+
+    # Clear existing season data
+    cursor.execute(
+        "DELETE FROM CBB_ANALYTICS.RAW.TOURNAMENT_SEEDS WHERE season = %s",
+        (SEASON,)
+    )
+
+    # Insert one row per team
+    rows = [
+        (team["team"], team["seed"], region, "active", SEASON)
+        for region, teams in bracket.items()
+        for team in teams
+    ]
+    cursor.executemany(
+        "INSERT INTO CBB_ANALYTICS.RAW.TOURNAMENT_SEEDS "
+        "(team_name, seed, region, status, season) VALUES (%s, %s, %s, %s, %s)",
+        rows
+    )
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+    print(f"      ✓ {len(rows)} teams written to RAW.TOURNAMENT_SEEDS.")
+
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # FILL THIS IN ON SUNDAY — one entry per team, in seed order shown above.
@@ -203,25 +252,25 @@ def build_regions_data(bracket: dict, teams_stats: dict, seed_lookup: dict) -> d
 def build_f4_and_champ(regions_data: dict, teams_stats: dict) -> tuple:
     """
     Build F4_DATA, CHAMP_DATA, and CHAMPION from regional champions.
-    Pairings: East vs West, South vs Midwest.
+    Pairings: South vs West (left F4), East vs Midwest (right F4).
     """
     east_champ    = regions_data["East"]["champion"]
     west_champ    = regions_data["West"]["champion"]
     south_champ   = regions_data["South"]["champion"]
     midwest_champ = regions_data["Midwest"]["champion"]
 
-    f4_ew_winner, _ = get_favorite(east_champ, west_champ, teams_stats)
-    f4_sm_winner, _ = get_favorite(south_champ, midwest_champ, teams_stats)
+    f4_sw_winner, _ = get_favorite(south_champ, west_champ, teams_stats)
+    f4_em_winner, _ = get_favorite(east_champ, midwest_champ, teams_stats)
 
     f4_data = [
-        {"a": {"team": east_champ},  "b": {"team": west_champ},    "winner": f4_ew_winner},
-        {"a": {"team": south_champ}, "b": {"team": midwest_champ}, "winner": f4_sm_winner},
+        {"a": {"team": south_champ}, "b": {"team": west_champ},    "winner": f4_sw_winner},  # South vs West
+        {"a": {"team": east_champ},  "b": {"team": midwest_champ}, "winner": f4_em_winner},  # East vs Midwest
     ]
 
-    champion, _ = get_favorite(f4_ew_winner, f4_sm_winner, teams_stats)
-    runner_up   = f4_sm_winner if champion == f4_ew_winner else f4_ew_winner
+    champion, _ = get_favorite(f4_sw_winner, f4_em_winner, teams_stats)
+    runner_up   = f4_em_winner if champion == f4_sw_winner else f4_sw_winner
 
-    champ_data = {"a": {"team": f4_ew_winner}, "b": {"team": f4_sm_winner}, "winner": champion}
+    champ_data = {"a": {"team": f4_sw_winner}, "b": {"team": f4_em_winner}, "winner": champion}
 
     return f4_data, champ_data, champion
 
@@ -364,7 +413,7 @@ if __name__ == "__main__":
     }
 
     # 5. Build SIM_DATA and write bracket_data.py
-    print("\n[5/5] Writing bracket_data.py...")
+    print("\n[5/6] Writing bracket_data.py...")
     sim_data    = build_sim_data(sim_results, BRACKET_INPUT, seed_lookup, top_n=25)
     output_path = Path(__file__).parent / "bracket_data.py"
     write_bracket_data(
@@ -377,6 +426,10 @@ if __name__ == "__main__":
         output_path=output_path,
     )
     print(f"      ✓ bracket_data.py written to {output_path}")
+
+    # 6. Write tournament seeds to Snowflake
+    print("\n[6/6] Writing tournament seeds to Snowflake...")
+    write_seeds_to_snowflake(BRACKET_INPUT)
 
     print("\n─" * 60)
     print("NEXT STEPS:")
