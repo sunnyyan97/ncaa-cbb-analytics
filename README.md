@@ -277,10 +277,6 @@ SNOWFLAKE_RAW_SCHEMA    # = RAW  (used by ingestion scripts)
 - [x] `generate_bracket_data.py` with Snowflake seed writer
 - [ ] **Selection Sunday bracket population (March 15)** — see workflow below
 - [ ] Tournament filter toggle in app (All Teams / Tournament Teams / Active Teams)
-- [ ] Historical backfill — 2023 and 2024 seasons for trend analysis
-- [ ] Bracket prediction model — logistic regression on historical game results
-- [ ] Monte Carlo bracket simulator — simulate tournament 10,000 times for round-by-round win probabilities
-- [ ] Game-level results ingestion from BartTorvik for head-to-head analysis
 
 ### Selection Sunday Workflow (March 15)
 
@@ -349,4 +345,4 @@ WHERE team_name = 'Team Name' AND season = 2026;
 
 ---
 
-*Built by Sunny Yan · [LinkedIn](https://linkedin.com/in/sunnyyan) · [GitHub](https://github.com/sunnyyan97)*
+*Built by Sunny Yan · [LinkedIn](https://www.linkedin.com/in/sunny-yan-0504a6120/) · [GitHub](https://github.com/sunnyyan97)*
