@@ -21,10 +21,11 @@ Using data ingested from KenPom and Bart Torvik, I created an interactive Stream
 ![Matchup Predictor](https://github.com/sunnyyan97/ncaa-cbb-analytics/blob/main/images/matchup_predictor.png)
 
 **Tabs:**
+- **Bracket Simulator** — Full interactive 68-team tournament bracket rendered from seeded data. Displays all teams across four regions with upset indicators (⚡) and gold highlighting for advancing winners. Populated from `bracket_data.py` after Selection Sunday.
 - **Matchup Predictor** — Select any two D1 teams and a location (home/away/neutral) to generate a win probability, projected score, and side-by-side metric breakdown. Uses a formula-based log5 model on consensus AdjEM with location adjustment.
 - **Efficiency Rankings** — Bar chart of top teams by consensus AdjEM, color-encoded by conference. Includes a barbell chart comparing KenPom vs BartTorvik rankings with disagreement callouts.
 - **Offense vs Defense** — Scatter plot of adjusted offensive vs defensive efficiency with quadrant labels and a diagonal line separating elite two-way teams.
-- **Starting Five** — Sortable table of team and player metrics aggregated across each team's top 5 by minutes percentage.
+- **Starting Five** — Sortable table of team and player metrics aggregated across each team's top 5 by minutes percentage, including upperclassmen count.
 - **WAB vs SOS** — Scatter identifying teams with strong résumés against tough schedules vs teams padding stats against weak competition.
 
 ---
@@ -51,6 +52,9 @@ Using data ingested from KenPom and Bart Torvik, I created an interactive Stream
                   ┌─────────────────┐
                   │    Snowflake    │
                   │   RAW Schema   │
+                  │                │
+                  │ + TOURNAMENT_  │
+                  │   SEEDS table  │
                   └───────┬─────────┘
                            │
                            ▼
@@ -121,7 +125,15 @@ ncaa-cbb-analytics/
 │               ├── fct_tournament_profile.sql
 │               └── marts.yml
 │
+├── modeling/
+│   └── predict.py                  # Matchup prediction + player stat queries
+│
 ├── app.py                          # Streamlit dashboard
+├── render_bracket.py               # Generates bracket HTML from bracket_data.py
+├── bracket_data.py                 # Seedings + bracket structure (generated post-Selection Sunday)
+├── bracket_template.html           # HTML/CSS/JS bracket rendering template
+├── generate_bracket_data.py        # Builds bracket_data.py + writes seeds to Snowflake
+├── simulate.py                     # Tournament simulation logic
 ├── requirements.txt
 ├── .github/
 │   └── workflows/
@@ -150,23 +162,29 @@ Business logic, joins, and aggregations. These are the tables exposed to the das
 | `dim_teams` | Canonical team dimension resolving name differences between KenPom and BartTorvik |
 | `fct_team_ratings` | Combined KenPom + BartTorvik metrics per team — core analytical table |
 | `fct_player_stats` | Player stats enriched with team context |
-| `fct_tournament_profile` | Master table combining team efficiency, SOS, WAB, and starting five player averages |
+| `fct_tournament_profile` | Master table combining team efficiency, SOS, WAB, starting five player averages, and tournament seed data joined from `RAW.TOURNAMENT_SEEDS` |
 
 ---
 
 ## Key Design Decisions
 
 **Canonical team dimension**
-KenPom and BartTorvik use different team names (e.g. "CSUN" vs "Cal St. Northridge"). `dim_teams` resolves 6 naming inconsistencies with a `CASE` statement so downstream models join cleanly without dropping rows.
+KenPom and BartTorvik use different team names (e.g. "CSUN" vs "Cal St. Northridge"). `dim_teams` resolves these naming inconsistencies with a `CASE` statement so downstream models join cleanly without dropping rows.
 
 **Official column headers**
 BartTorvik's player stats CSV ships without headers. Rather than relying on fragile positional column mapping, the ingestion script assigns the official column names sourced directly from BartTorvik's published header reference file — making the pipeline resilient to future column additions.
 
 **Starting five aggregation**
-`fct_tournament_profile` aggregates player stats across each team's top 5 players by minutes percentage (minimum 10 games) rather than relying on a single player metric. This includes an experience index counting seniors and graduate students — a historically predictive tournament factor.
+`fct_tournament_profile` aggregates player stats across each team's top 5 players by minutes percentage (minimum 10 games) rather than relying on a single player metric. Experience is measured as the count of upperclassmen (Jr/Sr/Gr) among those five — a historically predictive tournament factor.
 
 **Consensus efficiency margin**
-Rather than choosing one model over the other, `fct_tournament_profile` averages KenPom and BartTorvik adjusted efficiency margins into a single `consensus_adj_em` metric. Where the two models strongly disagree the source comparison chart in the dashboard surfaces the gap.
+Rather than choosing one model over the other, `fct_tournament_profile` averages KenPom and BartTorvik adjusted efficiency margins into a single `consensus_adj_em` metric. Where the two models strongly disagree, the source comparison chart in the dashboard surfaces the gap.
+
+**Separate ingestion and dbt schema secrets**
+The GitHub Actions pipeline uses two distinct secrets for Snowflake schema routing: `SNOWFLAKE_RAW_SCHEMA=RAW` for ingestion scripts writing raw data, and `SNOWFLAKE_SCHEMA=DEV` for dbt (which targets `DEV_MARTS`). A single shared secret caused a silent schema routing bug — separating them is the correct pattern.
+
+**Tournament seed infrastructure**
+Tournament seeds, regions, and elimination status are stored in `CBB_ANALYTICS.RAW.TOURNAMENT_SEEDS` and joined into `fct_tournament_profile` at query time. This keeps seeding data decoupled from the daily ingestion pipeline and allows the bracket and matchup predictor to filter by tournament status independently.
 
 ---
 
@@ -226,10 +244,11 @@ SNOWFLAKE_USER
 SNOWFLAKE_PASSWORD
 SNOWFLAKE_WAREHOUSE
 SNOWFLAKE_DATABASE
-SNOWFLAKE_SCHEMA
+SNOWFLAKE_SCHEMA        # = DEV  (used by dbt — targets DEV_MARTS)
+SNOWFLAKE_RAW_SCHEMA    # = RAW  (used by ingestion scripts)
 ```
 
-The pipeline runs automatically every day at 8am EST. Trigger a manual run from the Actions tab to test.
+> `SNOWFLAKE_SCHEMA` and `SNOWFLAKE_RAW_SCHEMA` must be configured as separate secrets. The pipeline runs automatically every day at 8am EST. Trigger a manual run from the Actions tab to test.
 
 ---
 
@@ -246,11 +265,76 @@ The pipeline runs automatically every day at 8am EST. Trigger a manual run from 
 
 ## Roadmap
 
-- [ ] Add tournament seeds and regions after Selection Sunday (March 15)
+- [x] KenPom + BartTorvik ingestion pipeline
+- [x] dbt staging and mart models
+- [x] Efficiency Rankings tab
+- [x] Offense vs. Defense scatter chart
+- [x] WAB vs. SOS chart
+- [x] Matchup Predictor with metric breakdown and tooltips
+- [x] Starting Five player stats table
+- [x] Bracket Simulator tab with full 68-team bracket
+- [x] Tournament seed infrastructure (`TOURNAMENT_SEEDS` table + `fct_tournament_profile` join)
+- [x] `generate_bracket_data.py` with Snowflake seed writer
+- [ ] **Selection Sunday bracket population (March 15)** — see workflow below
+- [ ] Tournament filter toggle in app (All Teams / Tournament Teams / Active Teams)
 - [ ] Historical backfill — 2023 and 2024 seasons for trend analysis
-- [ ] Bracket prediction model — logistic regression on historical game results to predict tournament winners
-- [ ] Monte Carlo bracket simulator — simulate tournament 10,000 times to generate round-by-round win probabilities
+- [ ] Bracket prediction model — logistic regression on historical game results
+- [ ] Monte Carlo bracket simulator — simulate tournament 10,000 times for round-by-round win probabilities
 - [ ] Game-level results ingestion from BartTorvik for head-to-head analysis
+
+### Selection Sunday Workflow (March 15)
+
+After the bracket is announced, follow these steps in order to populate the app with real tournament data.
+
+**1. Verify team name strings**
+
+Run this query to get the exact team name strings used in the data:
+```sql
+SELECT team_name, conference
+FROM CBB_ANALYTICS.DEV_MARTS.FCT_TOURNAMENT_PROFILE
+WHERE season = 2026
+ORDER BY conference, team_name;
+```
+Names in `BRACKET_INPUT` must match these strings exactly (case-sensitive).
+
+**2. Fill in the bracket**
+
+Open `generate_bracket_data.py` and populate `BRACKET_INPUT` with all 68 teams, seeds, and regions as announced. Use the exact name strings from step 1.
+
+**3. Run the bracket generator**
+```bash
+python generate_bracket_data.py
+```
+This validates team names against Snowflake, generates `bracket_data.py`, and writes all 68 teams with seeds and `status = 'active'` to `CBB_ANALYTICS.RAW.TOURNAMENT_SEEDS`.
+
+**4. Verify the bracket visually**
+```bash
+python render_bracket.py
+```
+Opens the bracket in your browser. Confirm all teams, seeds, and regions are correct before pushing.
+
+**5. Trigger a dbt run**
+
+Run `dbt run` locally or trigger `workflow_dispatch` on the GitHub Actions `daily_ingest.yml` workflow so `fct_tournament_profile` picks up the new seed data.
+
+**6. Commit and push**
+```bash
+git add bracket_data.py
+git commit -m "Add 2026 tournament bracket"
+git push
+```
+Streamlit Cloud will automatically redeploy on push.
+
+**7. Clear the Streamlit cache**
+
+In the deployed app, use the app menu (⋮ top right) → **Clear cache**, or wait up to 1 hour for the TTL to expire naturally.
+
+**As teams are eliminated**, update their status in Snowflake and trigger a dbt run:
+```sql
+UPDATE CBB_ANALYTICS.RAW.TOURNAMENT_SEEDS
+SET status = 'eliminated'
+WHERE team_name = 'Team Name' AND season = 2026;
+```
 
 ---
 
@@ -260,7 +344,8 @@ The pipeline runs automatically every day at 8am EST. Trigger a manual run from 
 - BartTorvik ratings update continuously — pipeline captures a daily snapshot
 - All efficiency metrics are per 100 possessions
 - BPM (Box Plus/Minus) estimates points contributed per 100 possessions vs an average player
-- Barthag represents the probability of beating an average D1 team
+- Barthag represents the probability of beating an average D1 team on a neutral court
+- Experience (upperclassmen) counts Jr/Sr/Gr players among the top 5 by minutes
 
 ---
 
