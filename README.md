@@ -6,7 +6,7 @@ An end-to-end analytics engineering pipeline for NCAA college basketball, built 
 
 ## Overview
 
-This project demonstrates a production-grade analytics engineering workflow applied to a real-world domain. The pipeline runs automatically every morning, pulling the latest team efficiency ratings and player stats, rebuilding all dbt models, and making fresh data available in the dashboard — with no manual intervention.
+This project demonstrates a production-grade analytics engineering workflow applied to a real-world domain. The pipeline runs automatically every morning, pulling the latest team efficiency ratings and player stats, runs all dbt models, and makes fresh data available in the dashboard — with no manual intervention.
 
 The analytical focus is NCAA tournament profiling: identifying which teams have the efficiency margins, strength of schedule, and player quality to succeed in March.
 
