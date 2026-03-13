@@ -1,3 +1,5 @@
+*Built by Sunny Yan · [LinkedIn](https://www.linkedin.com/in/sunny-yan-0504a6120/) · [GitHub](https://github.com/sunnyyan97)*
+
 # ncaa-cbb-analytics
 
 An end-to-end analytics engineering pipeline for NCAA college basketball, built on the modern data stack. Ingests data daily from KenPom and BartTorvik, transforms it through a dbt pipeline in Snowflake, and surfaces it through an interactive Streamlit dashboard.
@@ -343,6 +345,4 @@ WHERE team_name = 'Team Name' AND season = 2026;
 - Barthag represents the probability of beating an average D1 team on a neutral court
 - Experience (upperclassmen) counts Jr/Sr/Gr players among the top 5 by minutes
 
----
-
-*Built by Sunny Yan · [LinkedIn](https://www.linkedin.com/in/sunny-yan-0504a6120/) · [GitHub](https://github.com/sunnyyan97)*
+  
