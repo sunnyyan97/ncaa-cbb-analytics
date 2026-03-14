@@ -796,7 +796,7 @@ with tab4:
 
 with tab5:
     st.markdown('<div class="section-label">MATCHUP PREDICTOR</div>', unsafe_allow_html=True)
-    st.markdown('<div class="section-sub">Formula-based log5 win probability · Consensus AdjEM · Location adjusted</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-sub">Formula-based log5 win probability · Consensus AdjEM · Location adjusted · Pick two teams to predict their matchup</div>', unsafe_allow_html=True)
 
     teams = load_team_stats()
     team_list = sorted(teams.keys())
@@ -840,7 +840,7 @@ with tab5:
         <div style="background:#111827;border:1px solid #1f2937;border-radius:12px;padding:1.5rem;margin:1.5rem 0">
             <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:1rem">
                 <div>
-                    <div style="font-family:'Bebas Neue';font-size:1.2rem;color:{'#c8a96e' if winner_is_a else '#9ca3af'}">{team_a_name}</div>
+                    <div style="font-family:'Bebas Neue';font-size:1.2rem;color:{'#c8a96e' if winner_is_a else '#9ca3af'}">{team_a_name} <span style="font-size:0.85rem">({team_a_stats.get('record', '')})</span></div>
                     <div style="font-family:'Bebas Neue';font-size:2.8rem;color:{'#c8a96e' if winner_is_a else '#6b7280'};line-height:1">
                         {result['team_a_win_prob']*100:.1f}%
                     </div>
@@ -849,7 +849,7 @@ with tab5:
                     WIN PROBABILITY
                 </div>
                 <div style="text-align:right">
-                    <div style="font-family:'Bebas Neue';font-size:1.2rem;color:{'#c8a96e' if not winner_is_a else '#9ca3af'}">{team_b_name}</div>
+                    <div style="font-family:'Bebas Neue';font-size:1.2rem;color:{'#c8a96e' if not winner_is_a else '#9ca3af'}"><span style="font-size:0.85rem">({team_b_stats.get('record', '')})</span> {team_b_name}</div>
                     <div style="font-family:'Bebas Neue';font-size:2.8rem;color:{'#c8a96e' if not winner_is_a else '#6b7280'};line-height:1">
                         {result['team_b_win_prob']*100:.1f}%
                     </div>
@@ -1013,7 +1013,6 @@ with tab5:
                 <strong style="color:#6b7280">Model note:</strong>
                 Formula-based log5 predictor using consensus AdjEM. Location adjustment ±3.5 pts for home/away.
                 Scores estimated from team tempo and offensive/defensive efficiency.
-                A trained classification model using historical game results will replace this baseline post-season.
             </span>
         </div>
         """, unsafe_allow_html=True)
