@@ -119,9 +119,9 @@
     <div class="section-label" style="margin-bottom:0.4rem">REGIONAL BRACKET</div>
     <div style="font-size:0.75rem;color:#4b5563;margin-bottom:1rem">Most likely outcome path · Gold = advancing winner · ⚡ = upset</div>
     <div class="tab-row" id="region-tabs">
-      <button class="tab-btn active" onclick="setRegion('South',this)">South</button>
+      <button class="tab-btn active" onclick="setRegion('East',this)">East</button>
       <button class="tab-btn" onclick="setRegion('West',this)">West</button>
-      <button class="tab-btn" onclick="setRegion('East',this)">East</button>
+      <button class="tab-btn" onclick="setRegion('South',this)">South</button>
       <button class="tab-btn" onclick="setRegion('Midwest',this)">Midwest</button>
     </div>
     <div class="bracket-outer">
@@ -207,7 +207,7 @@ function createCard(cfg, x, top, game) {
   const th=cfg.TEAM_H, fs=th<=14?"0.6rem":th<=18?"0.66rem":"0.72rem";
   const sw=th<=14?"9px":th<=18?"11px":"13px";
   function slot(team, won, first) {
-    const seed = team.seed!=null ? `<span style="font-size:0.56rem;color:${won?"#8a6428":"#2e3d50"};width:${sw};text-align:right;flex-shrink:0;margin-right:2px">${team.seed}</span>` : "";
+    const seed = team.seed!=null ? `<span style="font-size:0.56rem;color:${won?"#8a6428":"#2e3d50"};width:${sw};text-align:right;flex-shrink:0;margin-right:4px">${team.seed}</span>` : "";
     const upset = (won&&game.upset) ? `<span style="font-size:0.55rem;margin-left:auto;padding-left:2px;flex-shrink:0">⚡</span>` : "";
     const bg   = won?"rgba(200,169,110,0.12)":"#0b1018";
     const bord = won?"rgba(200,169,110,0.4)":"#18222e";
@@ -343,9 +343,9 @@ function renderButterflyBracket(){
   //   so text stays in S16/R32 open space and never overlaps E8 cards at x=840
   const RIGHT_LABEL_RIGHT = 1075;
   [
-    {name:"SOUTH",   x:252,                   y:lblMidY,            rightAlign:false},
-    {name:"WEST",    x:252,                   y:BF_WEST_Y+lblMidY,  rightAlign:false},
-    {name:"EAST",    x:RIGHT_LABEL_RIGHT-200, y:lblMidY,            rightAlign:true},
+    {name:"EAST",    x:252,                   y:lblMidY,            rightAlign:false},
+    {name:"SOUTH",   x:252,                   y:BF_WEST_Y+lblMidY,  rightAlign:false},
+    {name:"WEST",    x:RIGHT_LABEL_RIGHT-200, y:lblMidY,            rightAlign:true},
     {name:"MIDWEST", x:RIGHT_LABEL_RIGHT-280, y:BF_WEST_Y+lblMidY,  rightAlign:true},
   ].forEach(({name,x,y,rightAlign})=>{
     const color=REGION_COLORS[name];
@@ -360,8 +360,8 @@ function renderButterflyBracket(){
     canvas.appendChild(bar);
   });
 
-  // Left side: South (y=0) + West (y=BF_WEST_Y)
-  [{rName:"South",yOff:0},{rName:"West",yOff:BF_WEST_Y}].forEach(({rName,yOff})=>{
+  // Left side: East (y=0) + South (y=BF_WEST_Y)
+  [{rName:"East",yOff:0},{rName:"South",yOff:BF_WEST_Y}].forEach(({rName,yOff})=>{
     const data=REGIONS_DATA[rName];
     const roundGames=[data.R64,data.R32,data.S16,data.E8];
     roundGames.forEach((games,ri)=>{
@@ -382,8 +382,8 @@ function renderButterflyBracket(){
     }
   });
 
-  // Right side: East (y=0) + Midwest (y=BF_WEST_Y) — right-to-left
-  [{rName:"East",yOff:0},{rName:"Midwest",yOff:BF_WEST_Y}].forEach(({rName,yOff})=>{
+  // Right side: West (y=0) + Midwest (y=BF_WEST_Y) — right-to-left
+  [{rName:"West",yOff:0},{rName:"Midwest",yOff:BF_WEST_Y}].forEach(({rName,yOff})=>{
     const data=REGIONS_DATA[rName];
     const roundGames=[data.R64,data.R32,data.S16,data.E8];
     roundGames.forEach((games,ri)=>{
@@ -405,12 +405,12 @@ function renderButterflyBracket(){
     }
   });
 
-  // F4 Left (South vs West)
+  // F4 Left (East vs South)
   canvas.appendChild(createCard(BF,BF_F4L,BF_F4_TOP,F4_DATA[0]));
-  const sE8=REGIONS_DATA.South.E8[0], sE8Top=gameTopC(BF,3,0);
-  conn(svg, BF_LX[3]+BF.ROUND_W, winY(BF,sE8Top,sE8), BF_F4L, BF_F4_TOP+BF.TEAM_H/2, sE8.winner===CHAMPION);
-  const wE8=REGIONS_DATA.West.E8[0], wE8Top=BF_WEST_Y+gameTopC(BF,3,0);
-  conn(svg, BF_LX[3]+BF.ROUND_W, winY(BF,wE8Top,wE8), BF_F4L, BF_F4_TOP+BF.TEAM_H+1+BF.TEAM_H/2, wE8.winner===CHAMPION);
+  const eE8=REGIONS_DATA.East.E8[0], eE8Top=gameTopC(BF,3,0);
+  conn(svg, BF_LX[3]+BF.ROUND_W, winY(BF,eE8Top,eE8), BF_F4L, BF_F4_TOP+BF.TEAM_H/2, eE8.winner===CHAMPION);
+  const sE8=REGIONS_DATA.South.E8[0], sE8Top=BF_WEST_Y+gameTopC(BF,3,0);
+  conn(svg, BF_LX[3]+BF.ROUND_W, winY(BF,sE8Top,sE8), BF_F4L, BF_F4_TOP+BF.TEAM_H+1+BF.TEAM_H/2, sE8.winner===CHAMPION);
 
   // Championship
   canvas.appendChild(createCard(BF,BF_CHAMP,BF_F4_TOP,CHAMP_DATA));
@@ -421,19 +421,19 @@ function renderButterflyBracket(){
   const f4lWY=winY(BF,BF_F4_TOP,F4_DATA[0]);
   conn(svg, BF_F4L+BF.ROUND_W, f4lWY, BF_CHAMP, BF_F4_TOP+BF.TEAM_H/2, F4_DATA[0].winner===CHAMPION);
 
-  // F4 Right (East vs Midwest)
+  // F4 Right (West vs Midwest)
   canvas.appendChild(createCard(BF,BF_F4R,BF_F4_TOP,F4_DATA[1]));
   const f4rWY=winY(BF,BF_F4_TOP,F4_DATA[1]);
   conn(svg, BF_F4R, f4rWY, BF_CHAMP+BF.ROUND_W, BF_F4_TOP+BF.TEAM_H+1+BF.TEAM_H/2, F4_DATA[1].winner===CHAMPION);
-  const eE8=REGIONS_DATA.East.E8[0], eE8Top=gameTopC(BF,3,0);
-  conn(svg, getRightX(3), winY(BF,eE8Top,eE8), BF_F4R+BF.ROUND_W, BF_F4_TOP+BF.TEAM_H/2, eE8.winner===CHAMPION);
+  const wE8=REGIONS_DATA.West.E8[0], wE8Top=gameTopC(BF,3,0);
+  conn(svg, getRightX(3), winY(BF,wE8Top,wE8), BF_F4R+BF.ROUND_W, BF_F4_TOP+BF.TEAM_H/2, wE8.winner===CHAMPION);
   const mE8=REGIONS_DATA.Midwest.E8[0], mE8Top=BF_WEST_Y+gameTopC(BF,3,0);
   conn(svg, getRightX(3), winY(BF,mE8Top,mE8), BF_F4R+BF.ROUND_W, BF_F4_TOP+BF.TEAM_H+1+BF.TEAM_H/2, mE8.winner===CHAMPION);
 }
 
 // ── Boot ───────────────────────────────────────────────────────────────────────
 renderTable();
-renderRegionalBracket("South");
+renderRegionalBracket("East");
 renderButterflyBracket();
 </script>
 </body>

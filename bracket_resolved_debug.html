@@ -7,8 +7,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-  body{background:#0a0e1a;color:#f0ede6;font-family:'DM Sans',sans-serif;min-height:100vh;padding:1.5rem}
-  .container{max-width:1100px;margin:0 auto}
+  body{background:#0a0e1a;color:#f0ede6;font-family:'DM Sans',sans-serif;min-height:100vh;padding:0.75rem}
+  .container{width:100%;max-width:100%}
 
   /* Cards */
   .card-gold{background:linear-gradient(135deg,#111827 0%,#1a2332 100%);border:1.5px solid #c8a96e;border-radius:12px}
@@ -75,7 +75,20 @@
     </div>
   </div>
 
-  <div class="sim-toolbar" style="margin-top:1rem">
+  <!-- Full Bracket — Butterfly only -->
+  <div style="margin-bottom:2rem;margin-top:1.5rem">
+    <div class="section-label" style="margin-bottom:0.4rem">FULL BRACKET</div>
+    <div style="font-size:0.75rem;color:#4b5563;margin-bottom:1rem">Complete tournament including Final Four &amp; Championship · Gold = advancing winner · ⚡ = upset</div>
+    <div class="bracket-outer" style="padding-bottom:1.5rem">
+      <div id="bf-hdr" class="round-hdr-row"></div>
+      <div id="bf-canvas" style="position:relative">
+        <svg id="bf-svg" style="position:absolute;top:0;left:0;pointer-events:none;overflow:visible"></svg>
+      </div>
+    </div>
+    <div style="font-size:0.68rem;color:#374151;margin-top:0.5rem;text-align:right">← → Scroll horizontally to see full bracket</div>
+  </div>
+
+  <div class="sim-toolbar">
     <span style="font-size:0.72rem;color:#374151" id="sim-run-meta"></span>
   </div>
 
@@ -119,19 +132,6 @@
     </div>
   </div>
 
-  <!-- Full Bracket — Butterfly only -->
-  <div style="margin-bottom:2rem">
-    <div class="section-label" style="margin-bottom:0.4rem">FULL BRACKET</div>
-    <div style="font-size:0.75rem;color:#4b5563;margin-bottom:1rem">Complete tournament including Final Four &amp; Championship · Gold path = projected champion</div>
-    <div class="bracket-outer" style="padding-bottom:1.5rem">
-      <div id="bf-hdr" class="round-hdr-row"></div>
-      <div id="bf-canvas" style="position:relative">
-        <svg id="bf-svg" style="position:absolute;top:0;left:0;pointer-events:none;overflow:visible"></svg>
-      </div>
-    </div>
-    <div style="font-size:0.68rem;color:#374151;margin-top:0.5rem;text-align:right">← → Scroll horizontally to see full bracket</div>
-  </div>
-
   <div class="model-note">
     <strong>Model note:</strong> Bracket shows most likely outcome path from 10000 Monte Carlo simulations using the Formula-based log5 model.
     All games treated as neutral site. ⚡ = simulated upset. Champion path highlighted in gold throughout the full bracket.
@@ -142,12 +142,12 @@
 
 <script>
 // ── Data (injected by render_bracket.py) ─────────────────────────────────────
-const SIM_DATA     = [{"team": "Michigan", "region": "West", "seed": 1, "R32": 0.99, "S16": 0.952, "E8": 0.901, "F4": 0.857, "Champion": 0.354}, {"team": "Duke", "region": "East", "seed": 1, "R32": 0.999, "S16": 0.983, "E8": 0.612, "F4": 0.47, "Champion": 0.205}, {"team": "Florida", "region": "South", "seed": 3, "R32": 0.985, "S16": 0.901, "E8": 0.812, "F4": 0.68, "Champion": 0.179}, {"team": "Houston", "region": "Midwest", "seed": 1, "R32": 0.988, "S16": 0.871, "E8": 0.712, "F4": 0.465, "Champion": 0.084}, {"team": "Arizona", "region": "East", "seed": 4, "R32": 0.981, "S16": 0.742, "E8": 0.501, "F4": 0.264, "Champion": 0.077}, {"team": "Illinois", "region": "East", "seed": 6, "R32": 0.921, "S16": 0.601, "E8": 0.381, "F4": 0.218, "Champion": 0.043}, {"team": "Iowa St.", "region": "Midwest", "seed": 3, "R32": 0.889, "S16": 0.554, "E8": 0.341, "F4": 0.199, "Champion": 0.018}, {"team": "Louisville", "region": "South", "seed": 8, "R32": 0.821, "S16": 0.498, "E8": 0.312, "F4": 0.205, "Champion": 0.014}, {"team": "Texas Tech", "region": "Midwest", "seed": 4, "R32": 0.812, "S16": 0.421, "E8": 0.221, "F4": 0.102, "Champion": 0.008}, {"team": "Gonzaga", "region": "Midwest", "seed": 5, "R32": 0.711, "S16": 0.298, "E8": 0.162, "F4": 0.084, "Champion": 0.004}, {"team": "Tennessee", "region": "East", "seed": 2, "R32": 0.701, "S16": 0.312, "E8": 0.148, "F4": 0.042, "Champion": 0.003}, {"team": "Kansas", "region": "West", "seed": 2, "R32": 0.689, "S16": 0.287, "E8": 0.141, "F4": 0.045, "Champion": 0.002}, {"team": "Wisconsin", "region": "East", "seed": 3, "R32": 0.812, "S16": 0.398, "E8": 0.201, "F4": 0.058, "Champion": 0.002}, {"team": "Nebraska", "region": "Midwest", "seed": 6, "R32": 0.621, "S16": 0.241, "E8": 0.118, "F4": 0.065, "Champion": 0.003}, {"team": "St. John's", "region": "Midwest", "seed": 2, "R32": 0.612, "S16": 0.231, "E8": 0.112, "F4": 0.075, "Champion": 0.002}];
-const REGIONS_DATA = {"East": {"R64": [{"a": {"seed": 1, "team": "Duke"}, "b": {"seed": 16, "team": "Vermont"}, "winner": "Duke", "upset": false}, {"a": {"seed": 8, "team": "Miss. St."}, "b": {"seed": 9, "team": "Boise St."}, "winner": "Boise St.", "upset": true}, {"a": {"seed": 5, "team": "Oregon"}, "b": {"seed": 12, "team": "Liberty"}, "winner": "Oregon", "upset": false}, {"a": {"seed": 4, "team": "Arizona"}, "b": {"seed": 13, "team": "High Point"}, "winner": "Arizona", "upset": false}, {"a": {"seed": 6, "team": "Illinois"}, "b": {"seed": 11, "team": "VCU"}, "winner": "Illinois", "upset": false}, {"a": {"seed": 3, "team": "Wisconsin"}, "b": {"seed": 14, "team": "Morehead St."}, "winner": "Wisconsin", "upset": false}, {"a": {"seed": 7, "team": "Marquette"}, "b": {"seed": 10, "team": "New Mexico"}, "winner": "Marquette", "upset": false}, {"a": {"seed": 2, "team": "Tennessee"}, "b": {"seed": 15, "team": "Wofford"}, "winner": "Tennessee", "upset": false}], "R32": [{"a": {"team": "Duke"}, "b": {"team": "Boise St."}, "winner": "Duke", "upset": false}, {"a": {"team": "Oregon"}, "b": {"team": "Arizona"}, "winner": "Arizona", "upset": false}, {"a": {"team": "Illinois"}, "b": {"team": "Wisconsin"}, "winner": "Wisconsin", "upset": true}, {"a": {"team": "Marquette"}, "b": {"team": "Tennessee"}, "winner": "Tennessee", "upset": false}], "S16": [{"a": {"team": "Duke"}, "b": {"team": "Arizona"}, "winner": "Duke", "upset": false}, {"a": {"team": "Wisconsin"}, "b": {"team": "Tennessee"}, "winner": "Tennessee", "upset": false}], "E8": [{"a": {"team": "Duke"}, "b": {"team": "Tennessee"}, "winner": "Duke", "upset": false}], "champion": "Duke"}, "West": {"R64": [{"a": {"seed": 1, "team": "Michigan"}, "b": {"seed": 16, "team": "Sac. Heart"}, "winner": "Michigan", "upset": false}, {"a": {"seed": 8, "team": "Dayton"}, "b": {"seed": 9, "team": "Creighton"}, "winner": "Creighton", "upset": true}, {"a": {"seed": 5, "team": "Clemson"}, "b": {"seed": 12, "team": "UC San Diego"}, "winner": "Clemson", "upset": false}, {"a": {"seed": 4, "team": "Texas A&M"}, "b": {"seed": 13, "team": "Troy"}, "winner": "Texas A&M", "upset": false}, {"a": {"seed": 6, "team": "BYU"}, "b": {"seed": 11, "team": "Drake"}, "winner": "BYU", "upset": false}, {"a": {"seed": 3, "team": "Kentucky"}, "b": {"seed": 14, "team": "Lipscomb"}, "winner": "Kentucky", "upset": false}, {"a": {"seed": 7, "team": "St. John's"}, "b": {"seed": 10, "team": "Vanderbilt"}, "winner": "St. John's", "upset": false}, {"a": {"seed": 2, "team": "Kansas"}, "b": {"seed": 15, "team": "Winthrop"}, "winner": "Kansas", "upset": false}], "R32": [{"a": {"team": "Michigan"}, "b": {"team": "Creighton"}, "winner": "Michigan", "upset": false}, {"a": {"team": "Clemson"}, "b": {"team": "Texas A&M"}, "winner": "Texas A&M", "upset": false}, {"a": {"team": "BYU"}, "b": {"team": "Kentucky"}, "winner": "Kentucky", "upset": false}, {"a": {"team": "St. John's"}, "b": {"team": "Kansas"}, "winner": "Kansas", "upset": false}], "S16": [{"a": {"team": "Michigan"}, "b": {"team": "Texas A&M"}, "winner": "Michigan", "upset": false}, {"a": {"team": "Kentucky"}, "b": {"team": "Kansas"}, "winner": "Kansas", "upset": false}], "E8": [{"a": {"team": "Michigan"}, "b": {"team": "Kansas"}, "winner": "Michigan", "upset": false}], "champion": "Michigan"}, "South": {"R64": [{"a": {"seed": 1, "team": "Auburn"}, "b": {"seed": 16, "team": "Ala. St."}, "winner": "Auburn", "upset": false}, {"a": {"seed": 8, "team": "Louisville"}, "b": {"seed": 9, "team": "Colo. St."}, "winner": "Louisville", "upset": false}, {"a": {"seed": 5, "team": "Memphis"}, "b": {"seed": 12, "team": "UNLV"}, "winner": "Memphis", "upset": false}, {"a": {"seed": 4, "team": "Maryland"}, "b": {"seed": 13, "team": "Bryant"}, "winner": "Maryland", "upset": false}, {"a": {"seed": 6, "team": "Missouri"}, "b": {"seed": 11, "team": "Pittsburgh"}, "winner": "Missouri", "upset": false}, {"a": {"seed": 3, "team": "Florida"}, "b": {"seed": 14, "team": "Rider"}, "winner": "Florida", "upset": false}, {"a": {"seed": 7, "team": "UCLA"}, "b": {"seed": 10, "team": "Utah St."}, "winner": "Utah St.", "upset": true}, {"a": {"seed": 2, "team": "Tennessee"}, "b": {"seed": 15, "team": "NJIT"}, "winner": "Tennessee", "upset": false}], "R32": [{"a": {"team": "Auburn"}, "b": {"team": "Louisville"}, "winner": "Auburn", "upset": false}, {"a": {"team": "Memphis"}, "b": {"team": "Maryland"}, "winner": "Maryland", "upset": false}, {"a": {"team": "Missouri"}, "b": {"team": "Florida"}, "winner": "Florida", "upset": false}, {"a": {"team": "Utah St."}, "b": {"team": "Tennessee"}, "winner": "Tennessee", "upset": false}], "S16": [{"a": {"team": "Auburn"}, "b": {"team": "Maryland"}, "winner": "Auburn", "upset": false}, {"a": {"team": "Florida"}, "b": {"team": "Tennessee"}, "winner": "Florida", "upset": false}], "E8": [{"a": {"team": "Auburn"}, "b": {"team": "Florida"}, "winner": "Florida", "upset": false}], "champion": "Florida"}, "Midwest": {"R64": [{"a": {"seed": 1, "team": "Houston"}, "b": {"seed": 16, "team": "SIUE"}, "winner": "Houston", "upset": false}, {"a": {"seed": 8, "team": "Mississippi"}, "b": {"seed": 9, "team": "Georgia"}, "winner": "Georgia", "upset": true}, {"a": {"seed": 5, "team": "Gonzaga"}, "b": {"seed": 12, "team": "Louisiana"}, "winner": "Gonzaga", "upset": false}, {"a": {"seed": 4, "team": "Texas Tech"}, "b": {"seed": 13, "team": "Colgate"}, "winner": "Texas Tech", "upset": false}, {"a": {"seed": 6, "team": "Nebraska"}, "b": {"seed": 11, "team": "San Diego St."}, "winner": "Nebraska", "upset": false}, {"a": {"seed": 3, "team": "Iowa St."}, "b": {"seed": 14, "team": "N. Iowa"}, "winner": "Iowa St.", "upset": false}, {"a": {"seed": 7, "team": "Cincinnati"}, "b": {"seed": 10, "team": "Xavier"}, "winner": "Xavier", "upset": true}, {"a": {"seed": 2, "team": "St. John's"}, "b": {"seed": 15, "team": "B-Cookman"}, "winner": "St. John's", "upset": false}], "R32": [{"a": {"team": "Houston"}, "b": {"team": "Georgia"}, "winner": "Houston", "upset": false}, {"a": {"team": "Gonzaga"}, "b": {"team": "Texas Tech"}, "winner": "Texas Tech", "upset": false}, {"a": {"team": "Nebraska"}, "b": {"team": "Iowa St."}, "winner": "Iowa St.", "upset": false}, {"a": {"team": "Xavier"}, "b": {"team": "St. John's"}, "winner": "St. John's", "upset": false}], "S16": [{"a": {"team": "Houston"}, "b": {"team": "Texas Tech"}, "winner": "Houston", "upset": false}, {"a": {"team": "Iowa St."}, "b": {"team": "St. John's"}, "winner": "Iowa St.", "upset": false}], "E8": [{"a": {"team": "Houston"}, "b": {"team": "Iowa St."}, "winner": "Houston", "upset": false}], "champion": "Houston"}};
-const F4_DATA      = [{"a": {"team": "Duke"}, "b": {"team": "Michigan"}, "winner": "Michigan"}, {"a": {"team": "Florida"}, "b": {"team": "Houston"}, "winner": "Florida"}];
-const CHAMP_DATA   = {"a": {"team": "Michigan"}, "b": {"team": "Florida"}, "winner": "Michigan"};
-const CHAMPION     = "Michigan";
-const SIM_META     = {"n_trials": 10000, "runtime_sec": 2.3, "model": "Formula-based log5", "season": "2025\u201326 NCAA Tournament"};
+const SIM_DATA     = [{"team": "Duke", "region": "East", "seed": 1, "R32": 1.0, "S16": 0.9987, "E8": 0.9261, "F4": 0.8212, "Champion": 0.283}, {"team": "Michigan", "region": "Midwest", "seed": 1, "R32": 1.0, "S16": 0.9977, "E8": 0.9438, "F4": 0.8093, "Champion": 0.2338}, {"team": "Arizona", "region": "West", "seed": 1, "R32": 1.0, "S16": 0.9983, "E8": 0.9273, "F4": 0.7876, "Champion": 0.1873}, {"team": "Florida", "region": "South", "seed": 1, "R32": 1.0, "S16": 0.999, "E8": 0.8722, "F4": 0.6506, "Champion": 0.0742}, {"team": "Houston", "region": "South", "seed": 2, "R32": 1.0, "S16": 0.9929, "E8": 0.8591, "F4": 0.4756, "Champion": 0.0532}, {"team": "Illinois", "region": "South", "seed": 3, "R32": 1.0, "S16": 0.9935, "E8": 0.8753, "F4": 0.4767, "Champion": 0.0468}, {"team": "Purdue", "region": "West", "seed": 2, "R32": 1.0, "S16": 0.9931, "E8": 0.8647, "F4": 0.6055, "Champion": 0.0378}, {"team": "Iowa St.", "region": "Midwest", "seed": 2, "R32": 1.0, "S16": 0.9939, "E8": 0.8396, "F4": 0.5992, "Champion": 0.0365}, {"team": "Connecticut", "region": "East", "seed": 2, "R32": 1.0, "S16": 0.9893, "E8": 0.7417, "F4": 0.4165, "Champion": 0.0084}, {"team": "Vanderbilt", "region": "South", "seed": 5, "R32": 1.0, "S16": 0.9311, "E8": 0.581, "F4": 0.2034, "Champion": 0.0072}, {"team": "Michigan St.", "region": "East", "seed": 3, "R32": 1.0, "S16": 0.9664, "E8": 0.6166, "F4": 0.3272, "Champion": 0.0067}, {"team": "Gonzaga", "region": "West", "seed": 3, "R32": 1.0, "S16": 0.9812, "E8": 0.7138, "F4": 0.2885, "Champion": 0.0058}, {"team": "St. John's", "region": "East", "seed": 5, "R32": 1.0, "S16": 0.9014, "E8": 0.5249, "F4": 0.0824, "Champion": 0.0033}, {"team": "Alabama", "region": "Midwest", "seed": 4, "R32": 1.0, "S16": 0.9388, "E8": 0.5041, "F4": 0.0901, "Champion": 0.0027}, {"team": "Virginia", "region": "Midwest", "seed": 3, "R32": 1.0, "S16": 0.9737, "E8": 0.5567, "F4": 0.209, "Champion": 0.0026}, {"team": "Texas Tech", "region": "Midwest", "seed": 5, "R32": 1.0, "S16": 0.8972, "E8": 0.4761, "F4": 0.0847, "Champion": 0.0022}, {"team": "Arkansas", "region": "West", "seed": 4, "R32": 1.0, "S16": 0.9551, "E8": 0.5469, "F4": 0.1074, "Champion": 0.002}, {"team": "Kansas", "region": "East", "seed": 4, "R32": 1.0, "S16": 0.9376, "E8": 0.4495, "F4": 0.0654, "Champion": 0.0012}, {"team": "Tennessee", "region": "Midwest", "seed": 6, "R32": 1.0, "S16": 0.7702, "E8": 0.3879, "F4": 0.132, "Champion": 0.0012}, {"team": "Wisconsin", "region": "West", "seed": 5, "R32": 1.0, "S16": 0.925, "E8": 0.4433, "F4": 0.0808, "Champion": 0.0011}, {"team": "Louisville", "region": "East", "seed": 6, "R32": 1.0, "S16": 0.8294, "E8": 0.3562, "F4": 0.1679, "Champion": 0.0009}, {"team": "Nebraska", "region": "South", "seed": 4, "R32": 1.0, "S16": 0.9732, "E8": 0.4088, "F4": 0.1058, "Champion": 0.0009}, {"team": "UCLA", "region": "East", "seed": 7, "R32": 1.0, "S16": 0.761, "E8": 0.2272, "F4": 0.081, "Champion": 0.0004}, {"team": "Ohio St.", "region": "East", "seed": 8, "R32": 1.0, "S16": 0.7286, "E8": 0.0637, "F4": 0.0281, "Champion": 0.0001}, {"team": "N.C. State", "region": "West", "seed": 11, "R32": 1.0, "S16": 0.4126, "E8": 0.1018, "F4": 0.0209, "Champion": 0.0001}];
+const REGIONS_DATA = {"East": {"R64": [{"a": {"seed": 1, "team": "Duke"}, "b": {"seed": 16, "team": "Siena"}, "winner": "Duke", "upset": false}, {"a": {"seed": 8, "team": "Ohio St."}, "b": {"seed": 9, "team": "TCU"}, "winner": "Ohio St.", "upset": false}, {"a": {"seed": 5, "team": "St. John's"}, "b": {"seed": 12, "team": "Northern Iowa"}, "winner": "St. John's", "upset": false}, {"a": {"seed": 4, "team": "Kansas"}, "b": {"seed": 13, "team": "Cal Baptist"}, "winner": "Kansas", "upset": false}, {"a": {"seed": 6, "team": "Louisville"}, "b": {"seed": 11, "team": "South Florida"}, "winner": "Louisville", "upset": false}, {"a": {"seed": 3, "team": "Michigan St."}, "b": {"seed": 14, "team": "North Dakota St."}, "winner": "Michigan St.", "upset": false}, {"a": {"seed": 7, "team": "UCLA"}, "b": {"seed": 10, "team": "UCF"}, "winner": "UCLA", "upset": false}, {"a": {"seed": 2, "team": "Connecticut"}, "b": {"seed": 15, "team": "Furman"}, "winner": "Connecticut", "upset": false}], "R32": [{"a": {"seed": 1, "team": "Duke"}, "b": {"seed": 8, "team": "Ohio St."}, "winner": "Duke", "upset": false}, {"a": {"seed": 5, "team": "St. John's"}, "b": {"seed": 4, "team": "Kansas"}, "winner": "St. John's", "upset": true}, {"a": {"seed": 6, "team": "Louisville"}, "b": {"seed": 3, "team": "Michigan St."}, "winner": "Michigan St.", "upset": false}, {"a": {"seed": 7, "team": "UCLA"}, "b": {"seed": 2, "team": "Connecticut"}, "winner": "Connecticut", "upset": false}], "S16": [{"a": {"seed": 1, "team": "Duke"}, "b": {"seed": 5, "team": "St. John's"}, "winner": "Duke", "upset": false}, {"a": {"seed": 3, "team": "Michigan St."}, "b": {"seed": 2, "team": "Connecticut"}, "winner": "Connecticut", "upset": false}], "E8": [{"a": {"seed": 1, "team": "Duke"}, "b": {"seed": 2, "team": "Connecticut"}, "winner": "Duke", "upset": false}], "champion": "Duke"}, "West": {"R64": [{"a": {"seed": 1, "team": "Arizona"}, "b": {"seed": 16, "team": "LIU"}, "winner": "Arizona", "upset": false}, {"a": {"seed": 8, "team": "Villanova"}, "b": {"seed": 9, "team": "Utah St."}, "winner": "Utah St.", "upset": true}, {"a": {"seed": 5, "team": "Wisconsin"}, "b": {"seed": 12, "team": "High Point"}, "winner": "Wisconsin", "upset": false}, {"a": {"seed": 4, "team": "Arkansas"}, "b": {"seed": 13, "team": "Hawaii"}, "winner": "Arkansas", "upset": false}, {"a": {"seed": 6, "team": "BYU"}, "b": {"seed": 11, "team": "N.C. State"}, "winner": "BYU", "upset": false}, {"a": {"seed": 3, "team": "Gonzaga"}, "b": {"seed": 14, "team": "Kennesaw St."}, "winner": "Gonzaga", "upset": false}, {"a": {"seed": 7, "team": "Miami FL"}, "b": {"seed": 10, "team": "Missouri"}, "winner": "Miami FL", "upset": false}, {"a": {"seed": 2, "team": "Purdue"}, "b": {"seed": 15, "team": "Queens"}, "winner": "Purdue", "upset": false}], "R32": [{"a": {"seed": 1, "team": "Arizona"}, "b": {"seed": 9, "team": "Utah St."}, "winner": "Arizona", "upset": false}, {"a": {"seed": 5, "team": "Wisconsin"}, "b": {"seed": 4, "team": "Arkansas"}, "winner": "Arkansas", "upset": false}, {"a": {"seed": 6, "team": "BYU"}, "b": {"seed": 3, "team": "Gonzaga"}, "winner": "Gonzaga", "upset": false}, {"a": {"seed": 7, "team": "Miami FL"}, "b": {"seed": 2, "team": "Purdue"}, "winner": "Purdue", "upset": false}], "S16": [{"a": {"seed": 1, "team": "Arizona"}, "b": {"seed": 4, "team": "Arkansas"}, "winner": "Arizona", "upset": false}, {"a": {"seed": 3, "team": "Gonzaga"}, "b": {"seed": 2, "team": "Purdue"}, "winner": "Purdue", "upset": false}], "E8": [{"a": {"seed": 1, "team": "Arizona"}, "b": {"seed": 2, "team": "Purdue"}, "winner": "Arizona", "upset": false}], "champion": "Arizona"}, "South": {"R64": [{"a": {"seed": 1, "team": "Florida"}, "b": {"seed": 16, "team": "Lehigh"}, "winner": "Florida", "upset": false}, {"a": {"seed": 8, "team": "Clemson"}, "b": {"seed": 9, "team": "Iowa"}, "winner": "Iowa", "upset": true}, {"a": {"seed": 5, "team": "Vanderbilt"}, "b": {"seed": 12, "team": "McNeese St."}, "winner": "Vanderbilt", "upset": false}, {"a": {"seed": 4, "team": "Nebraska"}, "b": {"seed": 13, "team": "Troy"}, "winner": "Nebraska", "upset": false}, {"a": {"seed": 6, "team": "North Carolina"}, "b": {"seed": 11, "team": "VCU"}, "winner": "North Carolina", "upset": false}, {"a": {"seed": 3, "team": "Illinois"}, "b": {"seed": 14, "team": "Penn"}, "winner": "Illinois", "upset": false}, {"a": {"seed": 7, "team": "Saint Mary's"}, "b": {"seed": 10, "team": "Texas A&M"}, "winner": "Saint Mary's", "upset": false}, {"a": {"seed": 2, "team": "Houston"}, "b": {"seed": 15, "team": "Idaho"}, "winner": "Houston", "upset": false}], "R32": [{"a": {"seed": 1, "team": "Florida"}, "b": {"seed": 9, "team": "Iowa"}, "winner": "Florida", "upset": false}, {"a": {"seed": 5, "team": "Vanderbilt"}, "b": {"seed": 4, "team": "Nebraska"}, "winner": "Vanderbilt", "upset": true}, {"a": {"seed": 6, "team": "North Carolina"}, "b": {"seed": 3, "team": "Illinois"}, "winner": "Illinois", "upset": false}, {"a": {"seed": 7, "team": "Saint Mary's"}, "b": {"seed": 2, "team": "Houston"}, "winner": "Houston", "upset": false}], "S16": [{"a": {"seed": 1, "team": "Florida"}, "b": {"seed": 5, "team": "Vanderbilt"}, "winner": "Florida", "upset": false}, {"a": {"seed": 3, "team": "Illinois"}, "b": {"seed": 2, "team": "Houston"}, "winner": "Houston", "upset": false}], "E8": [{"a": {"seed": 1, "team": "Florida"}, "b": {"seed": 2, "team": "Houston"}, "winner": "Florida", "upset": false}], "champion": "Florida"}, "Midwest": {"R64": [{"a": {"seed": 1, "team": "Michigan"}, "b": {"seed": 16, "team": "UMBC"}, "winner": "Michigan", "upset": false}, {"a": {"seed": 8, "team": "Georgia"}, "b": {"seed": 9, "team": "Saint Louis"}, "winner": "Georgia", "upset": false}, {"a": {"seed": 5, "team": "Texas Tech"}, "b": {"seed": 12, "team": "Akron"}, "winner": "Texas Tech", "upset": false}, {"a": {"seed": 4, "team": "Alabama"}, "b": {"seed": 13, "team": "Hofstra"}, "winner": "Alabama", "upset": false}, {"a": {"seed": 6, "team": "Tennessee"}, "b": {"seed": 11, "team": "SMU"}, "winner": "Tennessee", "upset": false}, {"a": {"seed": 3, "team": "Virginia"}, "b": {"seed": 14, "team": "Wright St."}, "winner": "Virginia", "upset": false}, {"a": {"seed": 7, "team": "Kentucky"}, "b": {"seed": 10, "team": "Santa Clara"}, "winner": "Kentucky", "upset": false}, {"a": {"seed": 2, "team": "Iowa St."}, "b": {"seed": 15, "team": "Tennessee St."}, "winner": "Iowa St.", "upset": false}], "R32": [{"a": {"seed": 1, "team": "Michigan"}, "b": {"seed": 8, "team": "Georgia"}, "winner": "Michigan", "upset": false}, {"a": {"seed": 5, "team": "Texas Tech"}, "b": {"seed": 4, "team": "Alabama"}, "winner": "Texas Tech", "upset": true}, {"a": {"seed": 6, "team": "Tennessee"}, "b": {"seed": 3, "team": "Virginia"}, "winner": "Virginia", "upset": false}, {"a": {"seed": 7, "team": "Kentucky"}, "b": {"seed": 2, "team": "Iowa St."}, "winner": "Iowa St.", "upset": false}], "S16": [{"a": {"seed": 1, "team": "Michigan"}, "b": {"seed": 5, "team": "Texas Tech"}, "winner": "Michigan", "upset": false}, {"a": {"seed": 3, "team": "Virginia"}, "b": {"seed": 2, "team": "Iowa St."}, "winner": "Iowa St.", "upset": false}], "E8": [{"a": {"seed": 1, "team": "Michigan"}, "b": {"seed": 2, "team": "Iowa St."}, "winner": "Michigan", "upset": false}], "champion": "Michigan"}};
+const F4_DATA      = [{"a": {"seed": 1, "team": "Duke"}, "b": {"seed": 1, "team": "Florida"}, "winner": "Duke"}, {"a": {"seed": 1, "team": "Arizona"}, "b": {"seed": 1, "team": "Michigan"}, "winner": "Michigan"}];
+const CHAMP_DATA   = {"a": {"seed": 1, "team": "Duke"}, "b": {"seed": 1, "team": "Michigan"}, "winner": "Duke"};
+const CHAMPION     = "Duke";
+const SIM_META     = {"n_trials": 10000, "runtime_sec": 3.1, "model": "Formula-based log5", "season": "2025\u201326 NCAA Tournament"};
 
 // ── Champion callout (populated from data) ────────────────────────────────────
 (function buildChampCallout(){
@@ -207,7 +207,7 @@ function createCard(cfg, x, top, game) {
   const th=cfg.TEAM_H, fs=th<=14?"0.6rem":th<=18?"0.66rem":"0.72rem";
   const sw=th<=14?"9px":th<=18?"11px":"13px";
   function slot(team, won, first) {
-    const seed = team.seed!=null ? `<span style="font-size:0.56rem;color:${won?"#8a6428":"#2e3d50"};width:${sw};text-align:right;flex-shrink:0;margin-right:2px">${team.seed}</span>` : "";
+    const seed = team.seed!=null ? `<span style="font-size:0.56rem;color:${won?"#8a6428":"#2e3d50"};width:${sw};text-align:right;flex-shrink:0;margin-right:4px">${team.seed}</span>` : "";
     const upset = (won&&game.upset) ? `<span style="font-size:0.55rem;margin-left:auto;padding-left:2px;flex-shrink:0">⚡</span>` : "";
     const bg   = won?"rgba(200,169,110,0.12)":"#0b1018";
     const bord = won?"rgba(200,169,110,0.4)":"#18222e";
@@ -307,7 +307,7 @@ function setRegion(region, btn){
 }
 
 // ── Butterfly Bracket ──────────────────────────────────────────────────────────
-// X layout: Left(E/W R64→E8) | F4L | CHAMP | F4R | Right(S/M E8→R64)
+// X layout: Left(S/W R64→E8) | F4L(SvW) | CHAMP | F4R(EvM) | Right(E/M E8→R64)
 const BF_LX=[0,120,240,360];
 const BF_F4L=480, BF_CHAMP=600, BF_F4R=720;
 const BF_RX=[840,960,1080,1200];
@@ -333,16 +333,35 @@ function renderButterflyBracket(){
   const rightHdrs=[["F4",720],["E8",840],["S16",960],["R32",1080],["R64",1200]];
   hdr.innerHTML=[...leftHdrs,...rightHdrs].map(([l,x])=>`<div style="position:absolute;left:${x}px;width:${BF.ROUND_W}px;text-align:center;font-size:0.57rem;color:${l==="🏆"?"#c8a96e":"#4b5563"};text-transform:uppercase;letter-spacing:0.08em">${l}</div>`).join("");
 
-  const lbls=[["EAST",0,0],["WEST",0,BF_WEST_Y],["SOUTH",BF_W-BF.ROUND_W,0],["MIDWEST",BF_W-BF.ROUND_W,BF_WEST_Y]];
-  lbls.forEach(([name,lx,ly])=>{
+  // ── Region labels — placed at E8/S16 convergence, NCAA bracket style ──
+  const REGION_COLORS={"SOUTH":"#4a9eff","WEST":"#34d399","EAST":"#e8532a","MIDWEST":"#c084fc"};
+  const lblMidY = BF.REGION_H/2; // vertical center of each region band
+  // Left labels sit between S16 (x=240) and E8 (x=360) — center at ~280
+  // Right labels sit between right-E8 right-edge (x=940) and right-S16 (x=960) — center at ~960
+  // Left labels: start at x=252, text flows right into E8 column open space
+  // Right labels: right-align within a box ending at S16 right edge (x=1048),
+  //   so text stays in S16/R32 open space and never overlaps E8 cards at x=840
+  const RIGHT_LABEL_RIGHT = 1075;
+  [
+    {name:"EAST",    x:252,                   y:lblMidY,            rightAlign:false},
+    {name:"SOUTH",   x:252,                   y:BF_WEST_Y+lblMidY,  rightAlign:false},
+    {name:"WEST",    x:RIGHT_LABEL_RIGHT-200, y:lblMidY,            rightAlign:true},
+    {name:"MIDWEST", x:RIGHT_LABEL_RIGHT-280, y:BF_WEST_Y+lblMidY,  rightAlign:true},
+  ].forEach(({name,x,y,rightAlign})=>{
+    const color=REGION_COLORS[name];
     const el=document.createElement("div");
-    el.style.cssText=`position:absolute;left:${lx}px;top:${ly}px;font-size:0.52rem;font-family:'Bebas Neue';color:#374151;letter-spacing:0.1em;padding:2px 0 0 2px`;
+    const w = rightAlign ? (RIGHT_LABEL_RIGHT - x) : 300;
+    el.style.cssText=`position:absolute;left:${x}px;top:${y-18}px;width:${w}px;text-align:${rightAlign?"right":"left"};font-family:'Bebas Neue';font-size:2rem;color:${color};letter-spacing:0.18em;opacity:0.22;pointer-events:none;user-select:none;line-height:1`;
     el.textContent=name;
     canvas.appendChild(el);
+    const barX = rightAlign ? RIGHT_LABEL_RIGHT-32 : x;
+    const bar=document.createElement("div");
+    bar.style.cssText=`position:absolute;left:${barX}px;top:${y-26}px;width:32px;height:2px;background:${color};opacity:0.35;pointer-events:none`;
+    canvas.appendChild(bar);
   });
 
-  // Left side: East (y=0) + West (y=BF_WEST_Y)
-  [{rName:"East",yOff:0},{rName:"West",yOff:BF_WEST_Y}].forEach(({rName,yOff})=>{
+  // Left side: East (y=0) + South (y=BF_WEST_Y)
+  [{rName:"East",yOff:0},{rName:"South",yOff:BF_WEST_Y}].forEach(({rName,yOff})=>{
     const data=REGIONS_DATA[rName];
     const roundGames=[data.R64,data.R32,data.S16,data.E8];
     roundGames.forEach((games,ri)=>{
@@ -363,8 +382,8 @@ function renderButterflyBracket(){
     }
   });
 
-  // Right side: South (y=0) + Midwest (y=BF_WEST_Y) — right-to-left
-  [{rName:"South",yOff:0},{rName:"Midwest",yOff:BF_WEST_Y}].forEach(({rName,yOff})=>{
+  // Right side: West (y=0) + Midwest (y=BF_WEST_Y) — right-to-left
+  [{rName:"West",yOff:0},{rName:"Midwest",yOff:BF_WEST_Y}].forEach(({rName,yOff})=>{
     const data=REGIONS_DATA[rName];
     const roundGames=[data.R64,data.R32,data.S16,data.E8];
     roundGames.forEach((games,ri)=>{
@@ -386,12 +405,12 @@ function renderButterflyBracket(){
     }
   });
 
-  // F4 Left (East vs West)
+  // F4 Left (East vs South)
   canvas.appendChild(createCard(BF,BF_F4L,BF_F4_TOP,F4_DATA[0]));
   const eE8=REGIONS_DATA.East.E8[0], eE8Top=gameTopC(BF,3,0);
   conn(svg, BF_LX[3]+BF.ROUND_W, winY(BF,eE8Top,eE8), BF_F4L, BF_F4_TOP+BF.TEAM_H/2, eE8.winner===CHAMPION);
-  const wE8=REGIONS_DATA.West.E8[0], wE8Top=BF_WEST_Y+gameTopC(BF,3,0);
-  conn(svg, BF_LX[3]+BF.ROUND_W, winY(BF,wE8Top,wE8), BF_F4L, BF_F4_TOP+BF.TEAM_H+1+BF.TEAM_H/2, wE8.winner===CHAMPION);
+  const sE8=REGIONS_DATA.South.E8[0], sE8Top=BF_WEST_Y+gameTopC(BF,3,0);
+  conn(svg, BF_LX[3]+BF.ROUND_W, winY(BF,sE8Top,sE8), BF_F4L, BF_F4_TOP+BF.TEAM_H+1+BF.TEAM_H/2, sE8.winner===CHAMPION);
 
   // Championship
   canvas.appendChild(createCard(BF,BF_CHAMP,BF_F4_TOP,CHAMP_DATA));
@@ -402,12 +421,12 @@ function renderButterflyBracket(){
   const f4lWY=winY(BF,BF_F4_TOP,F4_DATA[0]);
   conn(svg, BF_F4L+BF.ROUND_W, f4lWY, BF_CHAMP, BF_F4_TOP+BF.TEAM_H/2, F4_DATA[0].winner===CHAMPION);
 
-  // F4 Right (South vs Midwest)
+  // F4 Right (West vs Midwest)
   canvas.appendChild(createCard(BF,BF_F4R,BF_F4_TOP,F4_DATA[1]));
   const f4rWY=winY(BF,BF_F4_TOP,F4_DATA[1]);
   conn(svg, BF_F4R, f4rWY, BF_CHAMP+BF.ROUND_W, BF_F4_TOP+BF.TEAM_H+1+BF.TEAM_H/2, F4_DATA[1].winner===CHAMPION);
-  const sE8=REGIONS_DATA.South.E8[0], sE8Top=gameTopC(BF,3,0);
-  conn(svg, getRightX(3), winY(BF,sE8Top,sE8), BF_F4R+BF.ROUND_W, BF_F4_TOP+BF.TEAM_H/2, sE8.winner===CHAMPION);
+  const wE8=REGIONS_DATA.West.E8[0], wE8Top=gameTopC(BF,3,0);
+  conn(svg, getRightX(3), winY(BF,wE8Top,wE8), BF_F4R+BF.ROUND_W, BF_F4_TOP+BF.TEAM_H/2, wE8.winner===CHAMPION);
   const mE8=REGIONS_DATA.Midwest.E8[0], mE8Top=BF_WEST_Y+gameTopC(BF,3,0);
   conn(svg, getRightX(3), winY(BF,mE8Top,mE8), BF_F4R+BF.ROUND_W, BF_F4_TOP+BF.TEAM_H+1+BF.TEAM_H/2, mE8.winner===CHAMPION);
 }

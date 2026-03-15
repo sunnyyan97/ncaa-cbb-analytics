@@ -21,7 +21,7 @@ import snowflake.connector
 from pathlib import Path
 from dotenv import load_dotenv
 from modeling.predict import get_all_team_stats, predict_matchup
-from simulate import simulate_tournament, get_team_safe
+from modeling.simulate import simulate_tournament, get_team_safe
 
 load_dotenv()
 
@@ -74,76 +74,76 @@ def write_seeds_to_snowflake(bracket: dict) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 BRACKET_INPUT = {
     "East": [
-        {"seed": 1,  "team": ""},
-        {"seed": 16, "team": ""},
-        {"seed": 8,  "team": ""},
-        {"seed": 9,  "team": ""},
-        {"seed": 5,  "team": ""},
-        {"seed": 12, "team": ""},
-        {"seed": 4,  "team": ""},
-        {"seed": 13, "team": ""},
-        {"seed": 6,  "team": ""},
-        {"seed": 11, "team": ""},
-        {"seed": 3,  "team": ""},
-        {"seed": 14, "team": ""},
-        {"seed": 7,  "team": ""},
-        {"seed": 10, "team": ""},
-        {"seed": 2,  "team": ""},
-        {"seed": 15, "team": ""},
+        {"seed": 1,  "team": "Duke"},
+        {"seed": 16, "team": "Siena"},
+        {"seed": 8,  "team": "Ohio St."},
+        {"seed": 9,  "team": "TCU"},
+        {"seed": 5,  "team": "St. John's"},
+        {"seed": 12, "team": "Northern Iowa"},
+        {"seed": 4,  "team": "Kansas"},
+        {"seed": 13, "team": "Cal Baptist"},
+        {"seed": 6,  "team": "Louisville"},
+        {"seed": 11, "team": "South Florida"},
+        {"seed": 3,  "team": "Michigan St."},
+        {"seed": 14, "team": "North Dakota St."},
+        {"seed": 7,  "team": "UCLA"},
+        {"seed": 10, "team": "UCF"},
+        {"seed": 2,  "team": "Connecticut"},
+        {"seed": 15, "team": "Furman"},
     ],
     "West": [
-        {"seed": 1,  "team": ""},
-        {"seed": 16, "team": ""},
-        {"seed": 8,  "team": ""},
-        {"seed": 9,  "team": ""},
-        {"seed": 5,  "team": ""},
-        {"seed": 12, "team": ""},
-        {"seed": 4,  "team": ""},
-        {"seed": 13, "team": ""},
-        {"seed": 6,  "team": ""},
-        {"seed": 11, "team": ""},
-        {"seed": 3,  "team": ""},
-        {"seed": 14, "team": ""},
-        {"seed": 7,  "team": ""},
-        {"seed": 10, "team": ""},
-        {"seed": 2,  "team": ""},
-        {"seed": 15, "team": ""},
+        {"seed": 1,  "team": "Arizona"},
+        {"seed": 16, "team": "LIU"},
+        {"seed": 8,  "team": "Villanova"},
+        {"seed": 9,  "team": "Utah St."},
+        {"seed": 5,  "team": "Wisconsin"},
+        {"seed": 12, "team": "High Point"},
+        {"seed": 4,  "team": "Arkansas"},
+        {"seed": 13, "team": "Hawaii"},
+        {"seed": 6,  "team": "BYU"},
+        {"seed": 11, "team": "N.C. State"},  # First Four: Texas vs N.C. State — N.C. State (AdjEM 19.53) favored
+        {"seed": 3,  "team": "Gonzaga"},
+        {"seed": 14, "team": "Kennesaw St."},
+        {"seed": 7,  "team": "Miami FL"},
+        {"seed": 10, "team": "Missouri"},
+        {"seed": 2,  "team": "Purdue"},
+        {"seed": 15, "team": "Queens"},
     ],
     "South": [
-        {"seed": 1,  "team": ""},
-        {"seed": 16, "team": ""},
-        {"seed": 8,  "team": ""},
-        {"seed": 9,  "team": ""},
-        {"seed": 5,  "team": ""},
-        {"seed": 12, "team": ""},
-        {"seed": 4,  "team": ""},
-        {"seed": 13, "team": ""},
-        {"seed": 6,  "team": ""},
-        {"seed": 11, "team": ""},
-        {"seed": 3,  "team": ""},
-        {"seed": 14, "team": ""},
-        {"seed": 7,  "team": ""},
-        {"seed": 10, "team": ""},
-        {"seed": 2,  "team": ""},
-        {"seed": 15, "team": ""},
+        {"seed": 1,  "team": "Florida"},
+        {"seed": 16, "team": "Lehigh"},  # First Four: Prairie View A&M vs Lehigh — Lehigh (AdjEM -10.31) marginal favorite
+        {"seed": 8,  "team": "Clemson"},
+        {"seed": 9,  "team": "Iowa"},
+        {"seed": 5,  "team": "Vanderbilt"},
+        {"seed": 12, "team": "McNeese St."},
+        {"seed": 4,  "team": "Nebraska"},
+        {"seed": 13, "team": "Troy"},
+        {"seed": 6,  "team": "North Carolina"},
+        {"seed": 11, "team": "VCU"},
+        {"seed": 3,  "team": "Illinois"},
+        {"seed": 14, "team": "Penn"},
+        {"seed": 7,  "team": "Saint Mary's"},
+        {"seed": 10, "team": "Texas A&M"},
+        {"seed": 2,  "team": "Houston"},
+        {"seed": 15, "team": "Idaho"},
     ],
     "Midwest": [
-        {"seed": 1,  "team": ""},
-        {"seed": 16, "team": ""},
-        {"seed": 8,  "team": ""},
-        {"seed": 9,  "team": ""},
-        {"seed": 5,  "team": ""},
-        {"seed": 12, "team": ""},
-        {"seed": 4,  "team": ""},
-        {"seed": 13, "team": ""},
-        {"seed": 6,  "team": ""},
-        {"seed": 11, "team": ""},
-        {"seed": 3,  "team": ""},
-        {"seed": 14, "team": ""},
-        {"seed": 7,  "team": ""},
-        {"seed": 10, "team": ""},
-        {"seed": 2,  "team": ""},
-        {"seed": 15, "team": ""},
+        {"seed": 1,  "team": "Michigan"},
+        {"seed": 16, "team": "UMBC"},  # First Four: UMBC vs Howard — UMBC (AdjEM -1.70) favored
+        {"seed": 8,  "team": "Georgia"},
+        {"seed": 9,  "team": "Saint Louis"},
+        {"seed": 5,  "team": "Texas Tech"},
+        {"seed": 12, "team": "Akron"},
+        {"seed": 4,  "team": "Alabama"},
+        {"seed": 13, "team": "Hofstra"},
+        {"seed": 6,  "team": "Tennessee"},
+        {"seed": 11, "team": "SMU"},  # First Four: Miami OH vs SMU — SMU (AdjEM 18.11) favored
+        {"seed": 3,  "team": "Virginia"},
+        {"seed": 14, "team": "Wright St."},
+        {"seed": 7,  "team": "Kentucky"},
+        {"seed": 10, "team": "Santa Clara"},
+        {"seed": 2,  "team": "Iowa St."},
+        {"seed": 15, "team": "Tennessee St."},
     ],
 }
 
@@ -234,8 +234,8 @@ def build_regions_data(bracket: dict, teams_stats: dict, seed_lookup: dict) -> d
                 team_b = prev_winners[i + 1]
                 winner, _ = get_favorite(team_a, team_b, teams_stats)
                 games.append({
-                    "a":      {"team": team_a},
-                    "b":      {"team": team_b},
+                    "a":      {"seed": seed_lookup.get(team_a), "team": team_a},
+                    "b":      {"seed": seed_lookup.get(team_b), "team": team_b},
                     "winner": winner,
                     "upset":  is_upset(winner, team_a if winner == team_b else team_b, seed_lookup),
                 })
@@ -249,28 +249,32 @@ def build_regions_data(bracket: dict, teams_stats: dict, seed_lookup: dict) -> d
     return regions_data
 
 
-def build_f4_and_champ(regions_data: dict, teams_stats: dict) -> tuple:
+def build_f4_and_champ(regions_data: dict, teams_stats: dict, seed_lookup: dict) -> tuple:
     """
     Build F4_DATA, CHAMP_DATA, and CHAMPION from regional champions.
-    Pairings: South vs West (left F4), East vs Midwest (right F4).
+    Pairings: East vs South (left F4), West vs Midwest (right F4).
     """
     east_champ    = regions_data["East"]["champion"]
     west_champ    = regions_data["West"]["champion"]
     south_champ   = regions_data["South"]["champion"]
     midwest_champ = regions_data["Midwest"]["champion"]
 
-    f4_sw_winner, _ = get_favorite(south_champ, west_champ, teams_stats)
-    f4_em_winner, _ = get_favorite(east_champ, midwest_champ, teams_stats)
+    f4_es_winner, _ = get_favorite(east_champ, south_champ, teams_stats)
+    f4_wm_winner, _ = get_favorite(west_champ, midwest_champ, teams_stats)
 
     f4_data = [
-        {"a": {"team": south_champ}, "b": {"team": west_champ},    "winner": f4_sw_winner},  # South vs West
-        {"a": {"team": east_champ},  "b": {"team": midwest_champ}, "winner": f4_em_winner},  # East vs Midwest
+        {"a": {"seed": seed_lookup.get(east_champ),    "team": east_champ},
+         "b": {"seed": seed_lookup.get(south_champ),   "team": south_champ},   "winner": f4_es_winner},
+        {"a": {"seed": seed_lookup.get(west_champ),    "team": west_champ},
+         "b": {"seed": seed_lookup.get(midwest_champ), "team": midwest_champ}, "winner": f4_wm_winner},
     ]
 
-    champion, _ = get_favorite(f4_sw_winner, f4_em_winner, teams_stats)
-    runner_up   = f4_em_winner if champion == f4_sw_winner else f4_sw_winner
+    champion, _ = get_favorite(f4_es_winner, f4_wm_winner, teams_stats)
+    runner_up   = f4_wm_winner if champion == f4_es_winner else f4_es_winner
 
-    champ_data = {"a": {"team": f4_sw_winner}, "b": {"team": f4_em_winner}, "winner": champion}
+    champ_data = {"a": {"seed": seed_lookup.get(f4_es_winner), "team": f4_es_winner},
+                  "b": {"seed": seed_lookup.get(f4_wm_winner), "team": f4_wm_winner},
+                  "winner": champion}
 
     return f4_data, champ_data, champion
 
@@ -395,7 +399,7 @@ if __name__ == "__main__":
     # 3. Build most likely bracket path
     print("\n[3/5] Building most likely bracket path via predict_matchup...")
     regions_data       = build_regions_data(BRACKET_INPUT, teams_stats, seed_lookup)
-    f4_data, champ_data, champion = build_f4_and_champ(regions_data, teams_stats)
+    f4_data, champ_data, champion = build_f4_and_champ(regions_data, teams_stats, seed_lookup)
     print(f"      ✓ Projected champion: {champion}")
 
     # 4. Run Monte Carlo simulation
