@@ -283,7 +283,7 @@ def build_sim_data(
     sim_results: dict,
     bracket: dict,
     seed_lookup: dict,
-    top_n: int = 25,
+    top_n: int = 64,
 ) -> list:
     """
     Convert simulate_tournament output into the SIM_DATA list format.
@@ -301,10 +301,10 @@ def build_sim_data(
             "team":     team,
             "region":   region_lookup.get(team, ""),
             "seed":     seed_lookup.get(team, 0),
-            "R32":      round(probs.get("R64", 0.0), 4),   # reached R32 = won R64
-            "S16":      round(probs.get("R32", 0.0), 4),
-            "E8":       round(probs.get("S16", 0.0), 4),
-            "F4":       round(probs.get("E8",  0.0), 4),
+            "R32":      round(probs.get("R32", 0.0), 4),   # P(won R64 game, made R32)
+            "S16":      round(probs.get("S16", 0.0), 4),   # P(won R32 game, made S16)
+            "E8":       round(probs.get("E8",  0.0), 4),   # P(won S16 game, made E8)
+            "F4":       round(probs.get("F4",  0.0), 4),   # P(won E8 game, made F4)
             "Champion": round(probs.get("Champion", 0.0), 4),
         })
 
