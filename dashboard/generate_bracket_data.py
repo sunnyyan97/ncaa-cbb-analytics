@@ -185,8 +185,8 @@ ROUND_RESULTS = {
     "South":   {"R64": [], "R32": [], "S16": [], "E8": []},
     "Midwest": {"R64": [], "R32": [], "S16": [], "E8": []},
 }
-# Final Four actual results: [East/Midwest winner, West/South winner]
-# Matches FINAL_FOUR_PAIRINGS order: (South vs West), (East vs Midwest)
+# Final Four actual results: [East/South winner, West/Midwest winner]
+# Matches FINAL_FOUR_PAIRINGS order: (East vs South), (West vs Midwest)
 F4_RESULTS: list = []   # e.g. ["Florida", "Duke"] once F4 is played
 CHAMP_RESULT: str = ""  # e.g. "Duke" once championship is played
 
@@ -323,9 +323,9 @@ def build_f4_and_champ(
 ) -> tuple:
     """
     Build F4_DATA, CHAMP_DATA, and CHAMPION from regional champions.
-    Pairings: South vs West (game 0), East vs Midwest (game 1).
+    Pairings: East vs South (game 0, LEFT), West vs Midwest (game 1, RIGHT).
 
-    f4_results: optional list of 2 actual F4 winners [South/West winner, East/Midwest winner]
+    f4_results: optional list of 2 actual F4 winners [East/South winner, West/Midwest winner]
     champ_result: optional actual championship winner
     """
     east_champ    = regions_data["East"]["champion"]
@@ -334,39 +334,39 @@ def build_f4_and_champ(
     midwest_champ = regions_data["Midwest"]["champion"]
 
     if f4_results and len(f4_results) >= 1:
-        f4_sw_winner = f4_results[0]
-        f4_sw_played = True
+        f4_es_winner = f4_results[0]
+        f4_es_played = True
     else:
-        f4_sw_winner, _ = get_favorite(south_champ, west_champ, teams_stats)
-        f4_sw_played = False
+        f4_es_winner, _ = get_favorite(east_champ, south_champ, teams_stats)
+        f4_es_played = False
 
     if f4_results and len(f4_results) >= 2:
-        f4_em_winner = f4_results[1]
-        f4_em_played = True
+        f4_wm_winner = f4_results[1]
+        f4_wm_played = True
     else:
-        f4_em_winner, _ = get_favorite(east_champ, midwest_champ, teams_stats)
-        f4_em_played = False
+        f4_wm_winner, _ = get_favorite(west_champ, midwest_champ, teams_stats)
+        f4_wm_played = False
 
     f4_data = [
-        {"a": {"seed": seed_lookup.get(south_champ),   "team": south_champ},
-         "b": {"seed": seed_lookup.get(west_champ),    "team": west_champ},
-         "winner": f4_sw_winner, "played": f4_sw_played},
         {"a": {"seed": seed_lookup.get(east_champ),    "team": east_champ},
+         "b": {"seed": seed_lookup.get(south_champ),   "team": south_champ},
+         "winner": f4_es_winner, "played": f4_es_played},   # LEFT
+        {"a": {"seed": seed_lookup.get(west_champ),    "team": west_champ},
          "b": {"seed": seed_lookup.get(midwest_champ), "team": midwest_champ},
-         "winner": f4_em_winner, "played": f4_em_played},
+         "winner": f4_wm_winner, "played": f4_wm_played},   # RIGHT
     ]
 
     if champ_result:
         champion  = champ_result
         champ_played = True
     else:
-        champion, _ = get_favorite(f4_sw_winner, f4_em_winner, teams_stats)
+        champion, _ = get_favorite(f4_es_winner, f4_wm_winner, teams_stats)
         champ_played = False
-    runner_up = f4_em_winner if champion == f4_sw_winner else f4_sw_winner
+    runner_up = f4_wm_winner if champion == f4_es_winner else f4_es_winner
 
     champ_data = {
-        "a": {"seed": seed_lookup.get(f4_sw_winner), "team": f4_sw_winner},
-        "b": {"seed": seed_lookup.get(f4_em_winner), "team": f4_em_winner},
+        "a": {"seed": seed_lookup.get(f4_es_winner), "team": f4_es_winner},
+        "b": {"seed": seed_lookup.get(f4_wm_winner), "team": f4_wm_winner},
         "winner": champion,
         "played": champ_played,
     }
