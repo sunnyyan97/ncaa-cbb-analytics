@@ -48,6 +48,7 @@
 
   /* Bracket containers */
   .bracket-outer{background:#111827;border:1px solid #1f2937;border-radius:10px;padding:1rem 1.25rem 1.5rem;overflow:auto}
+  #bf-outer,#reg-outer{overflow:hidden}
 
   /* Round header row */
   .round-hdr-row{position:relative;height:22px;margin-bottom:0.75rem}
@@ -79,13 +80,14 @@
   <div style="margin-bottom:2rem;margin-top:1.5rem">
     <div class="section-label" style="margin-bottom:0.4rem">FULL BRACKET</div>
     <div style="font-size:0.75rem;color:#4b5563;margin-bottom:1rem">Complete tournament including Final Four &amp; Championship · Gold = advancing winner · ⚡ = upset</div>
-    <div class="bracket-outer" style="padding-bottom:1.5rem">
-      <div id="bf-hdr" class="round-hdr-row"></div>
-      <div id="bf-canvas" style="position:relative">
-        <svg id="bf-svg" style="position:absolute;top:0;left:0;pointer-events:none;overflow:visible"></svg>
+    <div class="bracket-outer" id="bf-outer" style="padding-bottom:1.5rem">
+      <div id="bf-scale-wrap" style="position:relative;transform-origin:top left">
+        <div id="bf-hdr" class="round-hdr-row"></div>
+        <div id="bf-canvas" style="position:relative">
+          <svg id="bf-svg" style="position:absolute;top:0;left:0;pointer-events:none;overflow:visible"></svg>
+        </div>
       </div>
     </div>
-    <div style="font-size:0.68rem;color:#374151;margin-top:0.5rem;text-align:right">← → Scroll horizontally to see full bracket</div>
   </div>
 
   <div class="sim-toolbar">
@@ -124,10 +126,12 @@
       <button class="tab-btn" onclick="setRegion('South',this)">South</button>
       <button class="tab-btn" onclick="setRegion('Midwest',this)">Midwest</button>
     </div>
-    <div class="bracket-outer">
-      <div id="reg-hdr" class="round-hdr-row"></div>
-      <div id="reg-canvas" style="position:relative">
-        <svg id="reg-svg" style="position:absolute;top:0;left:0;pointer-events:none;overflow:visible"></svg>
+    <div class="bracket-outer" id="reg-outer">
+      <div id="reg-scale-wrap" style="position:relative;transform-origin:top left">
+        <div id="reg-hdr" class="round-hdr-row"></div>
+        <div id="reg-canvas" style="position:relative">
+          <svg id="reg-svg" style="position:absolute;top:0;left:0;pointer-events:none;overflow:visible"></svg>
+        </div>
       </div>
     </div>
   </div>
@@ -251,6 +255,41 @@ function renderTable(){
 }
 function sortTable(k){sortKey=k;renderTable()}
 
+// ── Responsive Scaling ─────────────────────────────────────────────────────────
+let _rgNaturalW = 0, _rgNaturalH = 0;
+const BF_HDR_H = 20 + 12; // .round-hdr-row height + margin-bottom
+const OUTER_PAD_V = 40;   // bracket-outer top(16) + bottom(24) padding
+const OUTER_PAD_H = 40;   // bracket-outer left(20) + right(20) padding
+
+function notifyHeight() {
+  window.parent.postMessage({ type: "streamlit:setFrameHeight", height: document.body.scrollHeight }, "*");
+}
+
+function scaleButterflyBracket() {
+  const outer = document.getElementById("bf-outer");
+  const wrap  = document.getElementById("bf-scale-wrap");
+  if (!outer || !wrap || !BF_H) return;
+  const availW = outer.clientWidth - OUTER_PAD_H;
+  if (availW <= 0) return;
+  const scale = availW / BF_W;
+  wrap.style.transform = `scale(${scale})`;
+  outer.style.height = Math.ceil((BF_HDR_H + BF_H) * scale) + OUTER_PAD_V + "px";
+  notifyHeight();
+}
+
+function scaleRegionalBracket() {
+  if (!_rgNaturalW || !_rgNaturalH) return;
+  const outer = document.getElementById("reg-outer");
+  const wrap  = document.getElementById("reg-scale-wrap");
+  if (!outer || !wrap) return;
+  const availW = outer.clientWidth - OUTER_PAD_H;
+  if (availW <= 0) return;
+  const scale = Math.min(availW / _rgNaturalW, 1.0);
+  wrap.style.transform = `scale(${scale})`;
+  outer.style.height = Math.ceil((BF_HDR_H + _rgNaturalH) * scale) + OUTER_PAD_V + "px";
+  notifyHeight();
+}
+
 // ── Regional Bracket ───────────────────────────────────────────────────────────
 const RG_ROUNDS_LBL=["Round of 64","Round of 32","Sweet 16","Elite 8"];
 function renderRegionalBracket(regionName){
@@ -298,6 +337,9 @@ function renderRegionalBracket(regionName){
   const x1=3*RG.COL_STEP+RG.ROUND_W;
   addPath(svg,`M${x1} ${wy}L${x1+RG.CONN_W/2} ${wy}L${x1+RG.CONN_W/2} ${champCY}L${4*RG.COL_STEP+4} ${champCY}`,
     "rgba(200,169,110,0.55)",1.5);
+  _rgNaturalW = totalW;
+  _rgNaturalH = totalH;
+  scaleRegionalBracket();
 }
 
 function setRegion(region, btn){
@@ -429,12 +471,17 @@ function renderButterflyBracket(){
   conn(svg, getRightX(3), winY(BF,wE8Top,wE8), BF_F4R+BF.ROUND_W, BF_F4_TOP+BF.TEAM_H/2, wE8.winner===CHAMPION);
   const mE8=REGIONS_DATA.Midwest.E8[0], mE8Top=BF_WEST_Y+gameTopC(BF,3,0);
   conn(svg, getRightX(3), winY(BF,mE8Top,mE8), BF_F4R+BF.ROUND_W, BF_F4_TOP+BF.TEAM_H+1+BF.TEAM_H/2, mE8.winner===CHAMPION);
+  scaleButterflyBracket();
 }
 
 // ── Boot ───────────────────────────────────────────────────────────────────────
 renderTable();
 renderRegionalBracket("East");
 renderButterflyBracket();
+window.addEventListener("resize", () => {
+  scaleButterflyBracket();
+  scaleRegionalBracket();
+});
 </script>
 </body>
 </html>

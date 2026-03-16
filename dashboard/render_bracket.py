@@ -2,7 +2,7 @@ import json
 import os
 from pathlib import Path
 
-import bracket_data as bd
+from . import bracket_data as bd
 
 
 # Resolve template path relative to this file so imports work regardless of

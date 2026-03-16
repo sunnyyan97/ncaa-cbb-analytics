@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 import os
 from dotenv import load_dotenv
 from modeling.predict import get_all_team_stats, predict_matchup
-from render_bracket import render_bracket_html
+from dashboard.render_bracket import render_bracket_html
 
 load_dotenv()
 
@@ -1036,7 +1036,7 @@ with tab5:
 with tab6:
     try:
         bracket_html = render_bracket_html()
-        components.html(bracket_html, height=1800, scrolling=True)
+        components.html(bracket_html, height=2400, scrolling=True)
     except Exception as e:
         st.error(f"Could not render bracket: {e}")
 

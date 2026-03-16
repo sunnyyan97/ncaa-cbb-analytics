@@ -71,38 +71,62 @@ def play_game(team_a_name: str, team_b_name: str, teams_stats: dict) -> tuple:
         return team_b_name, team_a_name
 
 
-def simulate_once(bracket: dict, teams_stats: dict) -> dict:
+def simulate_once(
+    bracket: dict,
+    teams_stats: dict,
+    known_results: dict | None = None,
+    f4_results: list | None = None,
+    champ_result: str = "",
+) -> dict:
     """
     Simulate one full 68-team tournament from first round through championship.
 
     Args:
-        bracket:     dict with keys "East", "West", "South", "Midwest".
-                     Each value is a list of 16 dicts: {"seed": int, "team": str}.
-                     Teams must be ordered to match FIRST_ROUND_SEED_ORDER.
-        teams_stats: dict of team stats keyed by team name (from Snowflake).
+        bracket:       dict with keys "East", "West", "South", "Midwest".
+                       Each value is a list of 16 dicts: {"seed": int, "team": str}.
+                       Teams must be ordered to match FIRST_ROUND_SEED_ORDER.
+        teams_stats:   dict of team stats keyed by team name (from Snowflake).
+        known_results: optional dict {region → {round_name → [winner, ...]}}
+                       When a round has known results, those are used verbatim
+                       instead of calling play_game(). Partial lists are supported —
+                       only filled slots use the known result.
+        f4_results:    optional list of 2 actual F4 winners in FINAL_FOUR_PAIRINGS
+                       order: [South/West winner, East/Midwest winner].
+        champ_result:  optional actual championship winner.
 
     Returns:
         dict mapping each team name to the furthest round they reached,
         e.g. {"Duke": "Champion", "Tennessee": "F4", "Vermont": "R64", ...}
     """
+    known_results = known_results or {}
     results = {}
     regional_champions = []
 
     # ── Regional rounds (R64 through E8) ──────────────────────────────────
     for region_name in REGION_ORDER:
         region_teams = bracket[region_name]
+        region_known = known_results.get(region_name, {})
 
         # Teams ordered so that index 0/1 play, 2/3 play, 4/5 play, etc.
         current_round = [t["team"] for t in region_teams]
         round_idx = 0  # 0=R64, 1=R32, 2=S16, 3=E8
 
         while len(current_round) > 1:
+            round_name = ROUND_NAMES[round_idx]
+            round_known = region_known.get(round_name, [])
             next_round = []
-            for i in range(0, len(current_round), 2):
-                winner, loser = play_game(
-                    current_round[i], current_round[i + 1], teams_stats
-                )
-                results[loser] = ROUND_NAMES[round_idx]
+            for slot, i in enumerate(range(0, len(current_round), 2)):
+                if slot < len(round_known):
+                    # Use known result for this slot
+                    winner = round_known[slot]
+                    loser = (current_round[i]
+                             if winner == current_round[i + 1]
+                             else current_round[i + 1])
+                else:
+                    winner, loser = play_game(
+                        current_round[i], current_round[i + 1], teams_stats
+                    )
+                results[loser] = round_name
                 next_round.append(winner)
 
             current_round = next_round
@@ -112,21 +136,32 @@ def simulate_once(bracket: dict, teams_stats: dict) -> dict:
         regional_champions.append(current_round[0])
 
     # ── Final Four ────────────────────────────────────────────────────────
-    # East vs West, South vs Midwest
     semifinal_winners = []
-    for i, j in FINAL_FOUR_PAIRINGS:
-        winner, loser = play_game(
-            regional_champions[i], regional_champions[j], teams_stats
-        )
+    for game_idx, (i, j) in enumerate(FINAL_FOUR_PAIRINGS):
+        if f4_results and game_idx < len(f4_results):
+            winner = f4_results[game_idx]
+            loser = (regional_champions[i]
+                     if winner == regional_champions[j]
+                     else regional_champions[j])
+        else:
+            winner, loser = play_game(
+                regional_champions[i], regional_champions[j], teams_stats
+            )
         results[loser] = "F4"
         semifinal_winners.append(winner)
 
     # ── Championship ──────────────────────────────────────────────────────
-    champion, runner_up = play_game(
-        semifinal_winners[0], semifinal_winners[1], teams_stats
-    )
+    if champ_result:
+        champion  = champ_result
+        runner_up = (semifinal_winners[0]
+                     if champion == semifinal_winners[1]
+                     else semifinal_winners[1])
+    else:
+        champion, runner_up = play_game(
+            semifinal_winners[0], semifinal_winners[1], teams_stats
+        )
     results[runner_up] = "Championship"
-    results[champion] = "Champion"
+    results[champion]  = "Champion"
 
     return results
 
@@ -135,6 +170,9 @@ def simulate_tournament(
     bracket: dict,
     teams_stats: dict,
     n_simulations: int = 10000,
+    known_results: dict | None = None,
+    f4_results: list | None = None,
+    champ_result: str = "",
 ) -> dict:
     """
     Run the full tournament simulation N times and return round-by-round
@@ -146,6 +184,11 @@ def simulate_tournament(
         n_simulations: Number of Monte Carlo trials. Default 10,000 gives
                        ~0.5% standard error on a 50% probability — stable
                        enough for display without being slow.
+        known_results: optional dict {region → {round_name → [winner, ...]}}
+                       Passed through to simulate_once() — completed rounds use
+                       actual results instead of random simulation.
+        f4_results:    optional list of 2 actual Final Four winners.
+        champ_result:  optional actual championship winner.
 
     Returns:
         dict mapping team name -> {round_name -> probability (0.0–1.0)}
@@ -163,7 +206,10 @@ def simulate_tournament(
     reach_counts = defaultdict(lambda: defaultdict(int))
 
     for _ in range(n_simulations):
-        single_run = simulate_once(bracket, teams_stats)
+        single_run = simulate_once(bracket, teams_stats,
+                                   known_results=known_results,
+                                   f4_results=f4_results,
+                                   champ_result=champ_result)
 
         for team, furthest_round in single_run.items():
             is_champion = furthest_round == "Champion"

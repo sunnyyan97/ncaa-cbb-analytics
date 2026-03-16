@@ -28,12 +28,32 @@ load_dotenv()
 SEASON = 2026
 
 
-def write_seeds_to_snowflake(bracket: dict) -> None:
+def write_seeds_to_snowflake(bracket: dict, round_results: dict | None = None) -> None:
     """
     Truncate and repopulate CBB_ANALYTICS.RAW.TOURNAMENT_SEEDS with the
-    68 tournament teams, their seeds, regions, and initial status='active'.
-    Called after BRACKET_INPUT has been validated and the script is running.
+    68 tournament teams, their seeds, regions, and status.
+
+    Teams that appear as losers in round_results are marked status='eliminated'.
+    All other tournament teams are marked status='active'.
     """
+    # Build set of eliminated teams from round_results
+    eliminated = set()
+    for region_name, region_teams in bracket.items():
+        region_known = (round_results or {}).get(region_name, {})
+        current = [t["team"] for t in region_teams]
+        for round_key in ["R64", "R32", "S16", "E8"]:
+            winners = region_known.get(round_key, [])
+            if not winners:
+                break
+            next_round = []
+            for slot, i in enumerate(range(0, len(current), 2)):
+                if slot < len(winners):
+                    winner = winners[slot]
+                    loser = current[i] if winner == current[i + 1] else current[i + 1]
+                    eliminated.add(loser)
+                    next_round.append(winner)
+            current = next_round
+
     conn = snowflake.connector.connect(
         account=os.environ["SNOWFLAKE_ACCOUNT"],
         user=os.environ["SNOWFLAKE_USER"],
@@ -50,9 +70,11 @@ def write_seeds_to_snowflake(bracket: dict) -> None:
         (SEASON,)
     )
 
-    # Insert one row per team
+    # Insert one row per team with correct status
     rows = [
-        (team["team"], team["seed"], region, "active", SEASON)
+        (team["team"], team["seed"], region,
+         "eliminated" if team["team"] in eliminated else "active",
+         SEASON)
         for region, teams in bracket.items()
         for team in teams
     ]
@@ -65,7 +87,9 @@ def write_seeds_to_snowflake(bracket: dict) -> None:
     conn.commit()
     cursor.close()
     conn.close()
-    print(f"      ✓ {len(rows)} teams written to RAW.TOURNAMENT_SEEDS.")
+    n_elim = len(eliminated)
+    print(f"      ✓ {len(rows)} teams written to RAW.TOURNAMENT_SEEDS "
+          f"({n_elim} eliminated, {len(rows) - n_elim} active).")
 
 
 
@@ -149,6 +173,23 @@ BRACKET_INPUT = {
 
 N_SIMULATIONS = 10_000
 
+# ─────────────────────────────────────────────────────────────────────────────
+# FILL IN AFTER EACH ROUND — add actual winners in game-slot order.
+# Slot order matches BRACKET_INPUT region order (same seed-pair ordering).
+# Leave lists empty for rounds that haven't been played yet.
+# Example after R64 East: "R64": ["Duke", "TCU", "St. John's", "Kansas", ...]
+# ─────────────────────────────────────────────────────────────────────────────
+ROUND_RESULTS = {
+    "East":    {"R64": [], "R32": [], "S16": [], "E8": []},
+    "West":    {"R64": [], "R32": [], "S16": [], "E8": []},
+    "South":   {"R64": [], "R32": [], "S16": [], "E8": []},
+    "Midwest": {"R64": [], "R32": [], "S16": [], "E8": []},
+}
+# Final Four actual results: [East/Midwest winner, West/South winner]
+# Matches FINAL_FOUR_PAIRINGS order: (South vs West), (East vs Midwest)
+F4_RESULTS: list = []   # e.g. ["Florida", "Duke"] once F4 is played
+CHAMP_RESULT: str = ""  # e.g. "Duke" once championship is played
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers
@@ -197,47 +238,71 @@ def is_upset(winner: str, loser: str, seed_lookup: dict) -> bool:
     return seed_lookup.get(winner, 99) > seed_lookup.get(loser, 0)
 
 
-def build_regions_data(bracket: dict, teams_stats: dict, seed_lookup: dict) -> dict:
+def build_regions_data(
+    bracket: dict,
+    teams_stats: dict,
+    seed_lookup: dict,
+    round_results: dict | None = None,
+) -> dict:
     """
     Walk each region round by round, picking the most likely winner at each
     game slot via predict_matchup. Returns the full REGIONS_DATA structure.
+
+    round_results: optional dict {region → {round_name → [winner, ...]}}
+        When provided, actual winners are used for completed rounds instead of
+        model predictions. Each game in a completed round is marked "played": True.
     """
+    round_results = round_results or {}
     regions_data = {}
 
     for region_name, region_teams in bracket.items():
         region = {"R64": [], "R32": [], "S16": [], "E8": [], "champion": ""}
+        region_known = round_results.get(region_name, {})
 
         # R64 — derive directly from bracket input; seed info available
-        current_round_teams = [t["team"] for t in region_teams]
+        r64_known = region_known.get("R64", [])
         r64_games = []
-        for i in range(0, 16, 2):
+        for slot, i in enumerate(range(0, 16, 2)):
             team_a_entry = region_teams[i]
             team_b_entry = region_teams[i + 1]
-            winner, _ = get_favorite(team_a_entry["team"], team_b_entry["team"], teams_stats)
-            upset_flag = is_upset(winner, [team_a_entry["team"], team_b_entry["team"]][
-                0 if winner == team_b_entry["team"] else 1], seed_lookup)
+            if slot < len(r64_known):
+                winner = r64_known[slot]
+                played = True
+            else:
+                winner, _ = get_favorite(team_a_entry["team"], team_b_entry["team"], teams_stats)
+                played = False
+            loser = team_b_entry["team"] if winner == team_a_entry["team"] else team_a_entry["team"]
             r64_games.append({
                 "a":      {"seed": team_a_entry["seed"], "team": team_a_entry["team"]},
                 "b":      {"seed": team_b_entry["seed"], "team": team_b_entry["team"]},
                 "winner": winner,
-                "upset":  upset_flag,
+                "upset":  is_upset(winner, loser, seed_lookup),
+                "played": played,
             })
         region["R64"] = r64_games
 
         # R32, S16, E8 — advance winners from previous round
         prev_winners = [g["winner"] for g in r64_games]
         for round_key in ["R32", "S16", "E8"]:
+            known = region_known.get(round_key, [])
             games = []
             next_winners = []
-            for i in range(0, len(prev_winners), 2):
+            for slot, i in enumerate(range(0, len(prev_winners), 2)):
                 team_a = prev_winners[i]
                 team_b = prev_winners[i + 1]
-                winner, _ = get_favorite(team_a, team_b, teams_stats)
+                if slot < len(known):
+                    winner = known[slot]
+                    played = True
+                else:
+                    winner, _ = get_favorite(team_a, team_b, teams_stats)
+                    played = False
+                loser = team_a if winner == team_b else team_b
                 games.append({
                     "a":      {"seed": seed_lookup.get(team_a), "team": team_a},
                     "b":      {"seed": seed_lookup.get(team_b), "team": team_b},
                     "winner": winner,
-                    "upset":  is_upset(winner, team_a if winner == team_b else team_b, seed_lookup),
+                    "upset":  is_upset(winner, loser, seed_lookup),
+                    "played": played,
                 })
                 next_winners.append(winner)
             region[round_key] = games
@@ -249,32 +314,62 @@ def build_regions_data(bracket: dict, teams_stats: dict, seed_lookup: dict) -> d
     return regions_data
 
 
-def build_f4_and_champ(regions_data: dict, teams_stats: dict, seed_lookup: dict) -> tuple:
+def build_f4_and_champ(
+    regions_data: dict,
+    teams_stats: dict,
+    seed_lookup: dict,
+    f4_results: list | None = None,
+    champ_result: str = "",
+) -> tuple:
     """
     Build F4_DATA, CHAMP_DATA, and CHAMPION from regional champions.
-    Pairings: East vs South (left F4), West vs Midwest (right F4).
+    Pairings: South vs West (game 0), East vs Midwest (game 1).
+
+    f4_results: optional list of 2 actual F4 winners [South/West winner, East/Midwest winner]
+    champ_result: optional actual championship winner
     """
     east_champ    = regions_data["East"]["champion"]
     west_champ    = regions_data["West"]["champion"]
     south_champ   = regions_data["South"]["champion"]
     midwest_champ = regions_data["Midwest"]["champion"]
 
-    f4_es_winner, _ = get_favorite(east_champ, south_champ, teams_stats)
-    f4_wm_winner, _ = get_favorite(west_champ, midwest_champ, teams_stats)
+    if f4_results and len(f4_results) >= 1:
+        f4_sw_winner = f4_results[0]
+        f4_sw_played = True
+    else:
+        f4_sw_winner, _ = get_favorite(south_champ, west_champ, teams_stats)
+        f4_sw_played = False
+
+    if f4_results and len(f4_results) >= 2:
+        f4_em_winner = f4_results[1]
+        f4_em_played = True
+    else:
+        f4_em_winner, _ = get_favorite(east_champ, midwest_champ, teams_stats)
+        f4_em_played = False
 
     f4_data = [
+        {"a": {"seed": seed_lookup.get(south_champ),   "team": south_champ},
+         "b": {"seed": seed_lookup.get(west_champ),    "team": west_champ},
+         "winner": f4_sw_winner, "played": f4_sw_played},
         {"a": {"seed": seed_lookup.get(east_champ),    "team": east_champ},
-         "b": {"seed": seed_lookup.get(south_champ),   "team": south_champ},   "winner": f4_es_winner},
-        {"a": {"seed": seed_lookup.get(west_champ),    "team": west_champ},
-         "b": {"seed": seed_lookup.get(midwest_champ), "team": midwest_champ}, "winner": f4_wm_winner},
+         "b": {"seed": seed_lookup.get(midwest_champ), "team": midwest_champ},
+         "winner": f4_em_winner, "played": f4_em_played},
     ]
 
-    champion, _ = get_favorite(f4_es_winner, f4_wm_winner, teams_stats)
-    runner_up   = f4_wm_winner if champion == f4_es_winner else f4_es_winner
+    if champ_result:
+        champion  = champ_result
+        champ_played = True
+    else:
+        champion, _ = get_favorite(f4_sw_winner, f4_em_winner, teams_stats)
+        champ_played = False
+    runner_up = f4_em_winner if champion == f4_sw_winner else f4_sw_winner
 
-    champ_data = {"a": {"seed": seed_lookup.get(f4_es_winner), "team": f4_es_winner},
-                  "b": {"seed": seed_lookup.get(f4_wm_winner), "team": f4_wm_winner},
-                  "winner": champion}
+    champ_data = {
+        "a": {"seed": seed_lookup.get(f4_sw_winner), "team": f4_sw_winner},
+        "b": {"seed": seed_lookup.get(f4_em_winner), "team": f4_em_winner},
+        "winner": champion,
+        "played": champ_played,
+    }
 
     return f4_data, champ_data, champion
 
@@ -396,16 +491,22 @@ if __name__ == "__main__":
         stats["team_name"] = name
     print(f"      ✓ Loaded {len(teams_stats)} teams.")
 
-    # 3. Build most likely bracket path
-    print("\n[3/5] Building most likely bracket path via predict_matchup...")
-    regions_data       = build_regions_data(BRACKET_INPUT, teams_stats, seed_lookup)
-    f4_data, champ_data, champion = build_f4_and_champ(regions_data, teams_stats, seed_lookup)
+    # 3. Build most likely bracket path (using actual results where available)
+    print("\n[3/5] Building bracket path via predict_matchup (actual results applied)...")
+    regions_data       = build_regions_data(BRACKET_INPUT, teams_stats, seed_lookup,
+                                            round_results=ROUND_RESULTS)
+    f4_data, champ_data, champion = build_f4_and_champ(regions_data, teams_stats, seed_lookup,
+                                                        f4_results=F4_RESULTS,
+                                                        champ_result=CHAMP_RESULT)
     print(f"      ✓ Projected champion: {champion}")
 
     # 4. Run Monte Carlo simulation
     print(f"\n[4/5] Running {N_SIMULATIONS:,} simulations...")
     t0          = time.time()
-    sim_results = simulate_tournament(BRACKET_INPUT, teams_stats, n_simulations=N_SIMULATIONS)
+    sim_results = simulate_tournament(BRACKET_INPUT, teams_stats, n_simulations=N_SIMULATIONS,
+                                      known_results=ROUND_RESULTS,
+                                      f4_results=F4_RESULTS,
+                                      champ_result=CHAMP_RESULT)
     elapsed     = round(time.time() - t0, 1)
     print(f"      ✓ Done in {elapsed}s.")
 
@@ -433,7 +534,7 @@ if __name__ == "__main__":
 
     # 6. Write tournament seeds to Snowflake
     print("\n[6/6] Writing tournament seeds to Snowflake...")
-    write_seeds_to_snowflake(BRACKET_INPUT)
+    write_seeds_to_snowflake(BRACKET_INPUT, round_results=ROUND_RESULTS)
 
     print("\n─" * 60)
     print("NEXT STEPS:")

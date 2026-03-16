@@ -31,8 +31,9 @@ dbt deps                       # install packages (run once or after packages.ym
 ### Test the prediction model
 ```bash
 source venv/bin/activate
-python -m modeling.predict     # runs Duke vs Michigan example
-python -m modeling.simulate    # runs 10,000-simulation tournament test
+python -m modeling.predict                  # runs Duke vs Michigan example
+python -m modeling.simulate                 # runs 10,000-simulation tournament test
+python -m dashboard.generate_bracket_data   # regenerates dashboard/bracket_data.py from Snowflake
 ```
 
 ### Install dependencies
