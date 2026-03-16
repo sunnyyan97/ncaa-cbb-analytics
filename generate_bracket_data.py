@@ -418,7 +418,7 @@ if __name__ == "__main__":
 
     # 5. Build SIM_DATA and write bracket_data.py
     print("\n[5/6] Writing bracket_data.py...")
-    sim_data    = build_sim_data(sim_results, BRACKET_INPUT, seed_lookup, top_n=25)
+    sim_data    = build_sim_data(sim_results, BRACKET_INPUT, seed_lookup, top_n=64)
     output_path = Path(__file__).parent / "bracket_data.py"
     write_bracket_data(
         regions_data=regions_data,
