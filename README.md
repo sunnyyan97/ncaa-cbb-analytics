@@ -8,9 +8,9 @@ An end-to-end analytics engineering pipeline for NCAA college basketball, built 
 
 ## Overview
 
-This project demonstrates a production-grade analytics engineering workflow applied to a real-world domain. The pipeline runs automatically every morning, pulling the latest team efficiency ratings and player stats, runs all dbt models, and makes fresh data available in the dashboard — with no manual intervention.
+This project's analytical focus is NCAA Tournament teams profiling, identifying which teams have the best stats, strength of schedule, and player quality to succeed in March. 
 
-The analytical focus is NCAA tournament profiling: identifying which teams have the efficiency margins, strength of schedule, and player quality to succeed in March.
+The project contains a production-grade analytics engineering workflow applied to a real-world domain. The pipeline runs automatically every morning, pulling the latest team efficiency ratings and player stats, runs all dbt models, and makes fresh data available in the dashboard — with no manual intervention.
 
 ---
 
@@ -18,12 +18,12 @@ The analytical focus is NCAA tournament profiling: identifying which teams have 
 
 **[View Live Dashboard →](https://sunny-yan-cbb-analytics.streamlit.app/)**
 
-Using data ingested from KenPom and Bart Torvik, I created an interactive Streamlit dashboard that queries Snowflake directly and refreshes daily. Built with Plotly.
+Using data ingested from KenPom and Bart Torvik, I created an interactive Streamlit dashboard that queries Snowflake directly and refreshes daily. Built with Plotly. The streamlit dashboard has a bracket simulator with round-by-round probabilites, an individual matchup predictor and other relevant metrics for each team in this year's NCAA Tournament. 
 
 ![Matchup Predictor](https://github.com/sunnyyan97/ncaa-cbb-analytics/blob/main/images/matchup_predictor.png)
 
 **Tabs:**
-- **Bracket Simulator** — Full interactive 68-team tournament bracket rendered from seeded data. Displays all teams across four regions with upset indicators (⚡) and gold highlighting for advancing winners. Populated from `bracket_data.py` after Selection Sunday.
+- **Bracket Simulator** — Full interactive 68-team tournament bracket rendered from seeded data. Displays all teams across four regions with upset indicators (⚡) and gold highlighting for advancing winners. Also contains probabilities for which round each team will make it to.
 - **Matchup Predictor** — Select any two D1 teams and a location (home/away/neutral) to generate a win probability, projected score, and side-by-side metric breakdown. Uses a formula-based log5 model on consensus AdjEM with location adjustment.
 - **Efficiency Rankings** — Bar chart of top teams by consensus AdjEM, color-encoded by conference. Includes a barbell chart comparing KenPom vs BartTorvik rankings with disagreement callouts.
 - **Offense vs Defense** — Scatter plot of adjusted offensive vs defensive efficiency with quadrant labels and a diagonal line separating elite two-way teams.
@@ -265,77 +265,6 @@ SNOWFLAKE_RAW_SCHEMA    # = RAW  (used by ingestion scripts)
 
 ---
 
-## Roadmap
-
-- [x] KenPom + BartTorvik ingestion pipeline
-- [x] dbt staging and mart models
-- [x] Efficiency Rankings tab
-- [x] Offense vs. Defense scatter chart
-- [x] WAB vs. SOS chart
-- [x] Matchup Predictor with metric breakdown and tooltips
-- [x] Starting Five player stats table
-- [x] Bracket Simulator tab with full 68-team bracket
-- [x] Tournament seed infrastructure (`TOURNAMENT_SEEDS` table + `fct_tournament_profile` join)
-- [x] `generate_bracket_data.py` with Snowflake seed writer
-- [ ] **Selection Sunday bracket population (March 15)** — see workflow below
-- [ ] Tournament filter toggle in app (All Teams / Tournament Teams / Active Teams)
-
-### Selection Sunday Workflow (March 15)
-
-After the bracket is announced, follow these steps in order to populate the app with real tournament data.
-
-**1. Verify team name strings**
-
-Run this query to get the exact team name strings used in the data:
-```sql
-SELECT team_name, conference
-FROM CBB_ANALYTICS.DEV_MARTS.FCT_TOURNAMENT_PROFILE
-WHERE season = 2026
-ORDER BY conference, team_name;
-```
-Names in `BRACKET_INPUT` must match these strings exactly (case-sensitive).
-
-**2. Fill in the bracket**
-
-Open `generate_bracket_data.py` and populate `BRACKET_INPUT` with all 68 teams, seeds, and regions as announced. Use the exact name strings from step 1.
-
-**3. Run the bracket generator**
-```bash
-python generate_bracket_data.py
-```
-This validates team names against Snowflake, generates `bracket_data.py`, and writes all 68 teams with seeds and `status = 'active'` to `CBB_ANALYTICS.RAW.TOURNAMENT_SEEDS`.
-
-**4. Verify the bracket visually**
-```bash
-python render_bracket.py
-```
-Opens the bracket in your browser. Confirm all teams, seeds, and regions are correct before pushing.
-
-**5. Trigger a dbt run**
-
-Run `dbt run` locally or trigger `workflow_dispatch` on the GitHub Actions `daily_ingest.yml` workflow so `fct_tournament_profile` picks up the new seed data.
-
-**6. Commit and push**
-```bash
-git add bracket_data.py
-git commit -m "Add 2026 tournament bracket"
-git push
-```
-Streamlit Cloud will automatically redeploy on push.
-
-**7. Clear the Streamlit cache**
-
-In the deployed app, use the app menu (⋮ top right) → **Clear cache**, or wait up to 1 hour for the TTL to expire naturally.
-
-**As teams are eliminated**, update their status in Snowflake and trigger a dbt run:
-```sql
-UPDATE CBB_ANALYTICS.RAW.TOURNAMENT_SEEDS
-SET status = 'eliminated'
-WHERE team_name = 'Team Name' AND season = 2026;
-```
-
----
-
 ## Data Notes
 
 - KenPom ratings update daily during the season
@@ -345,4 +274,3 @@ WHERE team_name = 'Team Name' AND season = 2026;
 - Barthag represents the probability of beating an average D1 team on a neutral court
 - Experience (upperclassmen) counts Jr/Sr/Gr players among the top 5 by minutes
 
-  
