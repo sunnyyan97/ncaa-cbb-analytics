@@ -406,6 +406,10 @@ function renderButterflyBracket(){
   });
 
   // F4 Left (East vs South)
+  const f4lLbl=document.createElement("div");
+  f4lLbl.style.cssText=`position:absolute;left:${BF_F4L}px;top:${BF_F4_TOP-38}px;width:${BF.ROUND_W}px;text-align:center;font-size:1.05rem;font-family:'Bebas Neue';color:#c8a96e;letter-spacing:0.1em`;
+  f4lLbl.textContent="FINAL FOUR";
+  canvas.appendChild(f4lLbl);
   canvas.appendChild(createCard(BF,BF_F4L,BF_F4_TOP,F4_DATA[0]));
   const eE8=REGIONS_DATA.East.E8[0], eE8Top=gameTopC(BF,3,0);
   conn(svg, BF_LX[3]+BF.ROUND_W, winY(BF,eE8Top,eE8), BF_F4L, BF_F4_TOP+BF.TEAM_H/2, eE8.winner===CHAMPION);
@@ -415,13 +419,17 @@ function renderButterflyBracket(){
   // Championship
   canvas.appendChild(createCard(BF,BF_CHAMP,BF_F4_TOP,CHAMP_DATA));
   const champLbl=document.createElement("div");
-  champLbl.style.cssText=`position:absolute;left:${BF_CHAMP}px;top:${BF_F4_TOP-18}px;width:${BF.ROUND_W}px;text-align:center;font-size:0.52rem;font-family:'Bebas Neue';color:#c8a96e;letter-spacing:0.1em`;
+  champLbl.style.cssText=`position:absolute;left:${BF_CHAMP}px;top:${BF_F4_TOP-42}px;width:${BF.ROUND_W}px;text-align:center;font-size:1.05rem;font-family:'Bebas Neue';color:#c8a96e;letter-spacing:0.1em`;
   champLbl.textContent="NATIONAL CHAMPIONSHIP";
   canvas.appendChild(champLbl);
   const f4lWY=winY(BF,BF_F4_TOP,F4_DATA[0]);
   conn(svg, BF_F4L+BF.ROUND_W, f4lWY, BF_CHAMP, BF_F4_TOP+BF.TEAM_H/2, F4_DATA[0].winner===CHAMPION);
 
   // F4 Right (West vs Midwest)
+  const f4rLbl=document.createElement("div");
+  f4rLbl.style.cssText=`position:absolute;left:${BF_F4R}px;top:${BF_F4_TOP-38}px;width:${BF.ROUND_W}px;text-align:center;font-size:1.05rem;font-family:'Bebas Neue';color:#c8a96e;letter-spacing:0.1em`;
+  f4rLbl.textContent="FINAL FOUR";
+  canvas.appendChild(f4rLbl);
   canvas.appendChild(createCard(BF,BF_F4R,BF_F4_TOP,F4_DATA[1]));
   const f4rWY=winY(BF,BF_F4_TOP,F4_DATA[1]);
   conn(svg, BF_F4R, f4rWY, BF_CHAMP+BF.ROUND_W, BF_F4_TOP+BF.TEAM_H+1+BF.TEAM_H/2, F4_DATA[1].winner===CHAMPION);
