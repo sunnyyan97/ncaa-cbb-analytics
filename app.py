@@ -174,7 +174,11 @@ def load_data():
             avg_bpm, avg_obpm, avg_dbpm,
             avg_pts, avg_reb, avg_ast,
             avg_ts_pct, avg_efg_pct, avg_three_pt_pct,
-            experienced_players
+            experienced_players,
+            is_tournament_team,
+            tournament_seed,
+            tournament_region,
+            tournament_status
         FROM CBB_ANALYTICS.DEV_MARTS.FCT_TOURNAMENT_PROFILE
         WHERE season = 2026
         ORDER BY consensus_adj_em DESC NULLS LAST
@@ -321,16 +325,18 @@ with tab1:
     st.markdown('<div class="section-label">EFFICIENCY RANKINGS</div>', unsafe_allow_html=True)
     st.markdown('<div class="section-sub">Consensus Adjusted Efficiency Margin — average of KenPom and BartTorvik</div>', unsafe_allow_html=True)
 
+    tourn_df1 = df[df["is_tournament_team"]].copy()
+
     col_ctrl1, col_ctrl2 = st.columns([1, 3])
     with col_ctrl1:
-        n_teams_show = st.slider("Teams to show", 10, 50, 25, key="bar_n")
+        n_teams_show = st.slider("Teams to show", 10, len(tourn_df1), min(64, len(tourn_df1)), key="bar_n")
         conf_filter = st.selectbox(
             "Filter by conference",
-            ["All"] + sorted(df["conference"].dropna().unique().tolist()),
+            ["All"] + sorted(tourn_df1["conference"].dropna().unique().tolist()),
             key="bar_conf"
         )
 
-    filtered = df.copy()
+    filtered = tourn_df1.copy()
     if conf_filter != "All":
         filtered = filtered[filtered["conference"] == conf_filter]
     filtered = filtered.head(n_teams_show)
@@ -405,7 +411,7 @@ with tab1:
     st.markdown('<div class="section-label">SOURCE COMPARISON</div>', unsafe_allow_html=True)
     st.markdown('<div class="section-sub">KenPom AdjEM vs BartTorvik AdjEM for top 25 — large gaps indicate disagreement between models</div>', unsafe_allow_html=True)
 
-    top25 = df.head(25).copy()
+    top25 = tourn_df1.head(25).copy()
     top25["kenpom_adj_em"] = top25["kenpom_adj_em"].round(1)
     top25["torvik_adj_em"] = top25["torvik_adj_em"].round(1)
     fig_compare = go.Figure()
@@ -470,17 +476,19 @@ with tab2:
     st.markdown('<div class="section-label">OFFENSE VS DEFENSE</div>', unsafe_allow_html=True)
     st.markdown('<div class="section-sub">Adjusted Offensive Efficiency vs Adjusted Defensive Efficiency — better teams are top-right (high offense, low defense allowed)</div>', unsafe_allow_html=True)
 
+    tourn_df2 = df[df["is_tournament_team"]].copy()
+
     col_s1, col_s2 = st.columns([1, 3])
     with col_s1:
         source = st.selectbox("Data source", ["Combined", "KenPom", "BartTorvik"], key="scatter_src")
         highlight_conf = st.selectbox(
             "Highlight conference",
-            ["None"] + sorted(df["conference"].dropna().unique().tolist()),
+            ["None"] + sorted(tourn_df2["conference"].dropna().unique().tolist()),
             key="scatter_conf"
         )
-        n_teams_scatter = st.slider("Top N teams by AdjEM", 10, len(df), 70, key="scatter_n")
+        n_teams_scatter = st.slider("Top N teams by AdjEM", 10, len(tourn_df2), len(tourn_df2), key="scatter_n")
 
-    scatter_df = df.nlargest(n_teams_scatter, "consensus_adj_em").copy()
+    scatter_df = tourn_df2.nlargest(n_teams_scatter, "consensus_adj_em").copy()
 
     if source == "KenPom":
         x_col, y_col = "kenpom_off_efficiency", "kenpom_def_efficiency"
@@ -593,6 +601,9 @@ with tab3:
     st.markdown('<div class="section-label">STARTING FIVE ANALYSIS</div>', unsafe_allow_html=True)
     st.markdown('<div class="section-sub">Average stats across each team\'s top 5 players by minutes — min 10 games played</div>', unsafe_allow_html=True)
 
+    tourn_only_t3 = st.toggle("NCAA Tournament teams only", value=True, key="tourn_t3")
+    tab_df3 = df[df["is_tournament_team"]] if tourn_only_t3 else df
+
     col_t1, col_t2 = st.columns([1, 3])
     with col_t1:
         sort_col = st.selectbox("Sort by", [
@@ -601,12 +612,12 @@ with tab3:
         ], key="tbl_sort")
         conf_t = st.selectbox(
             "Filter by conference",
-            ["All"] + sorted(df["conference"].dropna().unique().tolist()),
+            ["All"] + sorted(tab_df3["conference"].dropna().unique().tolist()),
             key="tbl_conf"
         )
-        top_n = st.slider("Teams to show", 10, len(df), 50, key="tbl_n")
+        top_n = st.slider("Teams to show", 10, len(tab_df3), min(50, len(tab_df3)), key="tbl_n")
 
-    tbl = df.copy()
+    tbl = tab_df3.copy()
     if conf_t != "All":
         tbl = tbl[tbl["conference"] == conf_t]
     tbl = tbl.sort_values(sort_col, ascending=False).head(top_n)
@@ -665,12 +676,15 @@ with tab4:
     st.markdown('<div class="section-label">WINS ABOVE BUBBLE vs STRENGTH OF SCHEDULE</div>', unsafe_allow_html=True)
     st.markdown('<div class="section-sub">Teams in the top-right earned their ranking against tough competition. Top-left teams have a strong record against weak schedules.</div>', unsafe_allow_html=True)
 
+    tourn_only_t4 = st.toggle("NCAA Tournament teams only", value=True, key="tourn_t4")
+    tab_df4 = df[df["is_tournament_team"]] if tourn_only_t4 else df
+
     col_w1, col_w2 = st.columns([1, 3])
     with col_w1:
         sos_type = st.selectbox("SOS metric", ["Overall SOS", "Non-Conf SOS", "Projected SOS"], key="wab_sos")
         highlight_conf_w = st.selectbox(
             "Highlight conference",
-            ["None"] + sorted(df["conference"].dropna().unique().tolist()),
+            ["None"] + sorted(tab_df4["conference"].dropna().unique().tolist()),
             key="wab_conf"
         )
         min_games_w = st.slider("Min quality games", 0, 20, 10, key="wab_qual")
@@ -682,7 +696,7 @@ with tab4:
     }
     sos_col = sos_map[sos_type]
 
-    wab_df = df[df["qual_games"] >= min_games_w].copy()
+    wab_df = tab_df4[tab_df4["qual_games"] >= min_games_w].copy()
     wab_df = wab_df.dropna(subset=["wins_above_bubble", sos_col])
 
     wab_df["color"] = wab_df["conference"].apply(
@@ -780,7 +794,7 @@ with tab4:
     st.markdown('<div class="section-label">WAB LEADERBOARD</div>', unsafe_allow_html=True)
     st.markdown('<div class="section-sub">Top 20 teams by wins above bubble</div>', unsafe_allow_html=True)
 
-    wab_board = df.nlargest(20, "wins_above_bubble")[
+    wab_board = tab_df4.nlargest(20, "wins_above_bubble")[
         ["team_name", "conference", "record", "wins_above_bubble", "wins_above_bubble_rank", "sos", "non_conf_sos", "consensus_adj_em"]
     ].copy().rename(columns={
         "team_name": "Team", "conference": "Conf", "record": "Record",
@@ -799,7 +813,8 @@ with tab5:
     st.markdown('<div class="section-sub">Formula-based log5 win probability · Consensus AdjEM · Location adjusted · Pick two teams to predict their matchup</div>', unsafe_allow_html=True)
 
     teams = load_team_stats()
-    team_list = sorted(teams.keys())
+    tourn_only_t5 = st.toggle("NCAA Tournament teams only", value=True, key="tourn_t5")
+    team_list = sorted(t for t in teams if teams[t].get("is_tournament_team")) if tourn_only_t5 else sorted(teams.keys())
 
     # ── Team selectors ────────────────────────────────────────────────
     col_p1, col_p2, col_p3 = st.columns([2, 1, 2])
@@ -875,7 +890,7 @@ with tab5:
                 <div style="font-family:'Bebas Neue';font-size:4.5rem;color:#f0ede6;line-height:1;margin:0.2rem 0">{result['team_a_score']}</div>
                 <div style="font-size:0.7rem;color:#6b7280">projected pts</div>
                 <div style="font-size:0.78rem;color:#9ca3af;margin-top:0.75rem;border-top:1px solid #1f2937;padding-top:0.75rem">
-                    ⭐ {team_a_stats.get('top_player_name', 'N/A')}
+                    ⭐ {team_a_stats.get('top_player_name', 'N/A')} <span style="color:#6b7280;font-size:0.7rem">· (Most minutes played)</span>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -894,7 +909,7 @@ with tab5:
                 <div style="font-family:'Bebas Neue';font-size:4.5rem;color:#f0ede6;line-height:1;margin:0.2rem 0">{result['team_b_score']}</div>
                 <div style="font-size:0.7rem;color:#6b7280">projected pts</div>
                 <div style="font-size:0.78rem;color:#9ca3af;margin-top:0.75rem;border-top:1px solid #1f2937;padding-top:0.75rem">
-                    ⭐ {team_b_stats.get('top_player_name', 'N/A')}
+                    ⭐ {team_b_stats.get('top_player_name', 'N/A')} <span style="color:#6b7280;font-size:0.7rem">· (Most minutes played)</span>
                 </div>
             </div>
             """, unsafe_allow_html=True)

@@ -49,7 +49,8 @@ def get_all_team_stats() -> pd.DataFrame:
             avg_efg_pct,
             experienced_players,
             top_player_name,
-            top_player_bpm
+            top_player_bpm,
+            is_tournament_team
         FROM CBB_ANALYTICS.DEV_MARTS.FCT_TOURNAMENT_PROFILE
         WHERE season = 2026
         ORDER BY consensus_adj_em DESC
