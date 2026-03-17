@@ -50,7 +50,9 @@ def get_all_team_stats() -> pd.DataFrame:
             experienced_players,
             top_player_name,
             top_player_bpm,
-            is_tournament_team
+            is_tournament_team,
+            tournament_seed,
+            tournament_region
         FROM CBB_ANALYTICS.DEV_MARTS.FCT_TOURNAMENT_PROFILE
         WHERE season = 2026
         ORDER BY consensus_adj_em DESC
@@ -98,6 +100,43 @@ def get_top5_by_team(team_name: str) -> pd.DataFrame:
     cursor.close()
     conn.close()
 
+    return pd.DataFrame(results, columns=columns)
+
+
+def get_team_game_results(team_name: str, n: int = 15) -> pd.DataFrame:
+    """
+    Pull the last N completed games for a team from CBB_GAME_RESULTS.
+    Joins fct_team_ratings to get opponent's consensus ranking.
+    Returns: game_day, opponent, opp_rank, result
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        WITH ranked_teams AS (
+            SELECT team_name,
+                   RANK() OVER (ORDER BY consensus_adj_em DESC) AS rk
+            FROM CBB_ANALYTICS.DEV_MARTS.FCT_TEAM_RATINGS
+            WHERE season = 2026
+        )
+        SELECT
+            g.game_day                                          AS game_day,
+            g.opponent_torvik                                   AS opponent,
+            rt.rk                                              AS opp_rank,
+            CASE WHEN g.team_win THEN 'W' ELSE 'L' END
+                || ' ' || CAST(g.team_score AS INTEGER)
+                || '-' || CAST(g.opp_score  AS INTEGER)        AS result
+        FROM CBB_ANALYTICS.RAW.CBB_GAME_RESULTS g
+        LEFT JOIN ranked_teams rt ON rt.team_name = g.opponent_torvik
+        WHERE g.team_torvik = %s
+          AND g.season      = 2026
+        ORDER BY TRY_TO_DATE(g.game_day, 'MMMM DD, YYYY') DESC
+        LIMIT %s
+    """, (team_name, n))
+
+    results = cursor.fetchall()
+    columns = [col[0].lower() for col in cursor.description]
+    cursor.close()
+    conn.close()
     return pd.DataFrame(results, columns=columns)
 
 

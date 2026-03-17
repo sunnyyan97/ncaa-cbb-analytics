@@ -202,6 +202,11 @@ def load_top5(team_name: str):
     from modeling.predict import get_top5_by_team
     return get_top5_by_team(team_name)
 
+@st.cache_data(ttl=3600)
+def load_team_game_results(team_name: str):
+    from modeling.predict import get_team_game_results
+    return get_team_game_results(team_name)
+
 # ─── Load Data ───────────────────────────────────────────────────────────────
 try:
     df = load_data()
@@ -335,10 +340,17 @@ with tab1:
             ["All"] + sorted(tourn_df1["conference"].dropna().unique().tolist()),
             key="bar_conf"
         )
+        reg_filter1 = st.selectbox(
+            "Filter by region",
+            ["All", "East", "West", "South", "Midwest"],
+            key="bar_reg"
+        )
 
     filtered = tourn_df1.copy()
     if conf_filter != "All":
         filtered = filtered[filtered["conference"] == conf_filter]
+    if reg_filter1 != "All":
+        filtered = filtered[filtered["tournament_region"] == reg_filter1]
     filtered = filtered.head(n_teams_show)
 
     # Color scale by rank
@@ -486,8 +498,15 @@ with tab2:
             ["None"] + sorted(tourn_df2["conference"].dropna().unique().tolist()),
             key="scatter_conf"
         )
+        reg_filter2 = st.selectbox(
+            "Filter by region",
+            ["All", "East", "West", "South", "Midwest"],
+            key="scatter_reg"
+        )
         n_teams_scatter = st.slider("Top N teams by AdjEM", 10, len(tourn_df2), len(tourn_df2), key="scatter_n")
 
+    if reg_filter2 != "All":
+        tourn_df2 = tourn_df2[tourn_df2["tournament_region"] == reg_filter2]
     scatter_df = tourn_df2.nlargest(n_teams_scatter, "consensus_adj_em").copy()
 
     if source == "KenPom":
@@ -615,11 +634,21 @@ with tab3:
             ["All"] + sorted(tab_df3["conference"].dropna().unique().tolist()),
             key="tbl_conf"
         )
+        if tourn_only_t3:
+            reg_filter3 = st.selectbox(
+                "Filter by region",
+                ["All", "East", "West", "South", "Midwest"],
+                key="tbl_reg"
+            )
+        else:
+            reg_filter3 = "All"
         top_n = st.slider("Teams to show", 10, len(tab_df3), min(50, len(tab_df3)), key="tbl_n")
 
     tbl = tab_df3.copy()
     if conf_t != "All":
         tbl = tbl[tbl["conference"] == conf_t]
+    if reg_filter3 != "All":
+        tbl = tbl[tbl["tournament_region"] == reg_filter3]
     tbl = tbl.sort_values(sort_col, ascending=False).head(top_n)
 
     display_cols = {
@@ -687,6 +716,14 @@ with tab4:
             ["None"] + sorted(tab_df4["conference"].dropna().unique().tolist()),
             key="wab_conf"
         )
+        if tourn_only_t4:
+            reg_filter4 = st.selectbox(
+                "Filter by region",
+                ["All", "East", "West", "South", "Midwest"],
+                key="wab_reg"
+            )
+        else:
+            reg_filter4 = "All"
         min_games_w = st.slider("Min quality games", 0, 20, 10, key="wab_qual")
 
     sos_map = {
@@ -698,6 +735,8 @@ with tab4:
 
     wab_df = tab_df4[tab_df4["qual_games"] >= min_games_w].copy()
     wab_df = wab_df.dropna(subset=["wins_above_bubble", sos_col])
+    if reg_filter4 != "All":
+        wab_df = wab_df[wab_df["tournament_region"] == reg_filter4]
 
     wab_df["color"] = wab_df["conference"].apply(
     lambda c: "#c8a96e" if (highlight_conf_w != "None" and c == highlight_conf_w) else "#374151"
@@ -815,6 +854,15 @@ with tab5:
     teams = load_team_stats()
     tourn_only_t5 = st.toggle("NCAA Tournament teams only", value=True, key="tourn_t5")
     team_list = sorted(t for t in teams if teams[t].get("is_tournament_team")) if tourn_only_t5 else sorted(teams.keys())
+
+    if tourn_only_t5:
+        reg_filter5 = st.selectbox(
+            "Filter teams by region",
+            ["All", "East", "West", "South", "Midwest"],
+            key="pred_reg"
+        )
+        if reg_filter5 != "All":
+            team_list = [t for t in team_list if teams[t].get("tournament_region") == reg_filter5]
 
     # ── Team selectors ────────────────────────────────────────────────
     col_p1, col_p2, col_p3 = st.columns([2, 1, 2])
@@ -1031,6 +1079,25 @@ with tab5:
             </span>
         </div>
         """, unsafe_allow_html=True)
+
+        # ── Recent Results ────────────────────────────────────────────
+        st.markdown('<hr style="border-color:#1f2937;margin:1.5rem 0">', unsafe_allow_html=True)
+        st.markdown('<div class="section-label">RECENT RESULTS</div>', unsafe_allow_html=True)
+        res_col_a, res_col_b = st.columns(2)
+        col_labels = {"game_day": "Date", "opponent": "Opponent",
+                      "opp_rank": "Opp Rk", "result": "Result"}
+
+        for res_col, rteam in [(res_col_a, team_a_name), (res_col_b, team_b_name)]:
+            with res_col:
+                st.markdown(f"<div style='font-size:0.75rem;color:#c8a96e;font-family:\"Bebas Neue\";letter-spacing:0.1em;margin-bottom:0.5rem'>{rteam}</div>", unsafe_allow_html=True)
+                try:
+                    results_df = load_team_game_results(rteam).rename(columns=col_labels)
+                    if results_df.empty:
+                        st.markdown("<div style='font-size:0.75rem;color:#4b5563'>No results data available.</div>", unsafe_allow_html=True)
+                    else:
+                        st.dataframe(results_df, use_container_width=True, hide_index=True)
+                except Exception:
+                    st.markdown("<div style='font-size:0.75rem;color:#4b5563'>No results data available.</div>", unsafe_allow_html=True)
 
 # ── Tab 6: Bracket Simulator ──────────────────────────────────────────────────
 with tab6:

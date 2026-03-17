@@ -99,6 +99,14 @@
     <div class="table-hdr">
       <div class="section-label">ROUND-BY-ROUND PROBABILITIES</div>
       <div style="font-size:0.68rem;color:#4b5563">Click column to sort</div>
+      <div style="margin-top:0.5rem">
+        <span style="font-size:0.68rem;color:#4b5563;margin-right:0.5rem">Region:</span>
+        <button class="tab-btn reg-filter-btn active" onclick="filterRegion('All',this)">All</button>
+        <button class="tab-btn reg-filter-btn" onclick="filterRegion('East',this)">East</button>
+        <button class="tab-btn reg-filter-btn" onclick="filterRegion('West',this)">West</button>
+        <button class="tab-btn reg-filter-btn" onclick="filterRegion('South',this)">South</button>
+        <button class="tab-btn reg-filter-btn" onclick="filterRegion('Midwest',this)">Midwest</button>
+      </div>
     </div>
     <div style="overflow-x:auto">
       <table id="prob-table">
@@ -234,6 +242,7 @@ function winY(cfg, cardTop, game, asTop) {
 
 // ── Probability Table ──────────────────────────────────────────────────────────
 let sortKey="Champion";
+let regionFilter="All";
 function probColor(p){
   if(p>=0.5)  return{bg:"#c8a96e",col:"#0a0e1a"};
   if(p>=0.25) return{bg:"#8a6830",col:"#f0ede6"};
@@ -243,7 +252,8 @@ function probColor(p){
 }
 function fmtP(p){return p>=0.005?(p*100).toFixed(1)+"%":"<1%"}
 function renderTable(){
-  const sorted=[...SIM_DATA].sort((a,b)=>(b[sortKey]||0)-(a[sortKey]||0));
+  const base=regionFilter==="All"?SIM_DATA:SIM_DATA.filter(d=>d.region===regionFilter);
+  const sorted=[...base].sort((a,b)=>(b[sortKey]||0)-(a[sortKey]||0));
   const keys=["Champion","F4","E8","S16","R32"];
   document.getElementById("table-body").innerHTML=sorted.map(r=>{
     const cells=keys.map(k=>{const v=r[k]||0;const{bg,col}=probColor(v);return`<td class="td-prob" style="background:${bg};color:${col};font-weight:${v>=0.25?600:400}">${fmtP(v)}</td>`;}).join("");
@@ -254,6 +264,12 @@ function renderTable(){
   if(m[sortKey]!=null) document.querySelectorAll("#prob-table th")[m[sortKey]].classList.add("sorted");
 }
 function sortTable(k){sortKey=k;renderTable()}
+function filterRegion(r,btn){
+  regionFilter=r;
+  document.querySelectorAll(".reg-filter-btn").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  renderTable();
+}
 
 // ── Responsive Scaling ─────────────────────────────────────────────────────────
 let _rgNaturalW = 0, _rgNaturalH = 0;
