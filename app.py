@@ -202,11 +202,6 @@ def load_top5(team_name: str):
     from modeling.predict import get_top5_by_team
     return get_top5_by_team(team_name)
 
-@st.cache_data(ttl=3600)
-def load_team_game_results(team_name: str):
-    from modeling.predict import get_team_game_results
-    return get_team_game_results(team_name)
-
 # ─── Load Data ───────────────────────────────────────────────────────────────
 try:
     df = load_data()
@@ -855,15 +850,6 @@ with tab5:
     tourn_only_t5 = st.toggle("NCAA Tournament teams only", value=True, key="tourn_t5")
     team_list = sorted(t for t in teams if teams[t].get("is_tournament_team")) if tourn_only_t5 else sorted(teams.keys())
 
-    if tourn_only_t5:
-        reg_filter5 = st.selectbox(
-            "Filter teams by region",
-            ["All", "East", "West", "South", "Midwest"],
-            key="pred_reg"
-        )
-        if reg_filter5 != "All":
-            team_list = [t for t in team_list if teams[t].get("tournament_region") == reg_filter5]
-
     # ── Team selectors ────────────────────────────────────────────────
     col_p1, col_p2, col_p3 = st.columns([2, 1, 2])
     with col_p1:
@@ -1079,25 +1065,6 @@ with tab5:
             </span>
         </div>
         """, unsafe_allow_html=True)
-
-        # ── Recent Results ────────────────────────────────────────────
-        st.markdown('<hr style="border-color:#1f2937;margin:1.5rem 0">', unsafe_allow_html=True)
-        st.markdown('<div class="section-label">RECENT RESULTS</div>', unsafe_allow_html=True)
-        res_col_a, res_col_b = st.columns(2)
-        col_labels = {"game_day": "Date", "opponent": "Opponent",
-                      "opp_rank": "Opp Rk", "result": "Result"}
-
-        for res_col, rteam in [(res_col_a, team_a_name), (res_col_b, team_b_name)]:
-            with res_col:
-                st.markdown(f"<div style='font-size:0.75rem;color:#c8a96e;font-family:\"Bebas Neue\";letter-spacing:0.1em;margin-bottom:0.5rem'>{rteam}</div>", unsafe_allow_html=True)
-                try:
-                    results_df = load_team_game_results(rteam).rename(columns=col_labels)
-                    if results_df.empty:
-                        st.markdown("<div style='font-size:0.75rem;color:#4b5563'>No results data available.</div>", unsafe_allow_html=True)
-                    else:
-                        st.dataframe(results_df, use_container_width=True, hide_index=True)
-                except Exception:
-                    st.markdown("<div style='font-size:0.75rem;color:#4b5563'>No results data available.</div>", unsafe_allow_html=True)
 
 # ── Tab 6: Bracket Simulator ──────────────────────────────────────────────────
 with tab6:
