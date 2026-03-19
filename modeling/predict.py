@@ -103,24 +103,27 @@ def get_top5_by_team(team_name: str) -> pd.DataFrame:
     return pd.DataFrame(results, columns=columns)
 
 
-def get_team_game_results(team_name: str, n: int = 15) -> pd.DataFrame:
+def get_team_game_results(team_name: str, n: int | None = None) -> pd.DataFrame:
     """
-    Pull the last N completed games for a team from CBB_GAME_RESULTS.
+    Pull all completed games for a team this season from CBB_GAME_RESULTS.
     Joins fct_team_ratings to get opponent's consensus ranking.
-    Returns: game_day, opponent, opp_rank, result
+    Returns: game_day, opponent, game_location, opp_rank, result
+    Pass n to limit the number of results returned.
     """
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("""
+    limit_clause = f"LIMIT {int(n)}" if n is not None else ""
+    cursor.execute(f"""
         WITH ranked_teams AS (
             SELECT team_name,
-                   RANK() OVER (ORDER BY consensus_adj_em DESC) AS rk
+                   RANK() OVER (ORDER BY (kenpom_adj_em + torvik_adj_em) / 2 DESC) AS rk
             FROM CBB_ANALYTICS.DEV_MARTS.FCT_TEAM_RATINGS
             WHERE season = 2026
         )
         SELECT
             g.game_day                                          AS game_day,
             g.opponent_torvik                                   AS opponent,
+            g.game_location                                     AS location,
             rt.rk                                              AS opp_rank,
             CASE WHEN g.team_win THEN 'W' ELSE 'L' END
                 || ' ' || CAST(g.team_score AS INTEGER)
@@ -129,9 +132,9 @@ def get_team_game_results(team_name: str, n: int = 15) -> pd.DataFrame:
         LEFT JOIN ranked_teams rt ON rt.team_name = g.opponent_torvik
         WHERE g.team_torvik = %s
           AND g.season      = 2026
-        ORDER BY TRY_TO_DATE(g.game_day, 'MMMM DD, YYYY') DESC
-        LIMIT %s
-    """, (team_name, n))
+        ORDER BY TRY_TO_DATE(g.game_day, 'MM/DD/YY') DESC
+        {limit_clause}
+    """, (team_name,))
 
     results = cursor.fetchall()
     columns = [col[0].lower() for col in cursor.description]
