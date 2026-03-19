@@ -14,6 +14,7 @@ joined as (
         -- identifiers
         p.player_id,
         p.player_name,
+        p.jersey_number,
         p.team_name,
         p.conference,
         p.season,

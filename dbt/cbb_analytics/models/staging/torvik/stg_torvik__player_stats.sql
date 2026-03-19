@@ -10,6 +10,7 @@ renamed as (
         -- identifiers
         cast(pid as integer)            as player_id,
         player_name,
+        try_cast(num as integer)        as jersey_number,
         team                            as team_name,
         conf                            as conference,
         yr                              as eligibility,

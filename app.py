@@ -198,9 +198,9 @@ def load_team_stats():
     return teams
 
 @st.cache_data(ttl=3600)
-def load_top5(team_name: str):
-    from modeling.predict import get_top5_by_team
-    return get_top5_by_team(team_name)
+def load_top8(team_name: str):
+    from modeling.predict import get_top8_by_team
+    return get_top8_by_team(team_name)
 
 @st.cache_data(ttl=3600)
 def load_team_game_results(team_name: str):
@@ -1014,8 +1014,8 @@ with tab5:
 
         # ── Starting Five ─────────────────────────────────────────────
         st.markdown('<hr style="border-color:#1f2937;margin:1.5rem 0">', unsafe_allow_html=True)
-        st.markdown('<div class="section-label">STARTING FIVE</div>', unsafe_allow_html=True)
-        st.markdown('<div class="section-sub">Top 5 players by minutes · min 10 games played · Sorted by minutes played</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-label">TOP 8 PLAYERS</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-sub">Top 8 players by minutes · min 10 games played · Sorted by minutes played</div>', unsafe_allow_html=True)
 
         p5_col1, p5_col2 = st.columns(2)
 
@@ -1023,26 +1023,28 @@ with tab5:
             with col:
                 st.markdown(f"<div style='font-size:0.75rem;color:#c8a96e;font-family:\"Bebas Neue\";letter-spacing:0.1em;margin-bottom:0.5rem'>{team_name}</div>", unsafe_allow_html=True)
                 try:
-                    p5_df = load_top5(team_name)
+                    p5_df = load_top8(team_name)
                     if p5_df.empty:
                         st.markdown("<div style='font-size:0.75rem;color:#4b5563'>No player data available.</div>", unsafe_allow_html=True)
                     else:
                         # Convert decimals to percentages where needed
-                        for pct_col in ["ts_pct", "usage_pct"]:
+                        for pct_col in ["fg_pct", "three_pt_pct", "usage_pct"]:
                             if pct_col in p5_df.columns:
                                 p5_df[pct_col] = p5_df[pct_col].apply(
                                     lambda x: round(x * 100, 1) if x is not None and x <= 1 else round(x, 1) if x is not None else None
                                 )
-                        display_df = p5_df[["player_name", "position", "eligibility", "pts_per_game", "reb_per_game", "ast_per_game", "bpm", "ts_pct", "usage_pct"]].rename(columns={
-                            "player_name": "Player",
-                            "position":    "Pos",
-                            "eligibility": "Yr",
-                            "pts_per_game": "PTS",
-                            "reb_per_game": "REB",
-                            "ast_per_game": "AST",
-                            "bpm":          "BPM",
-                            "ts_pct":       "TS%",
-                            "usage_pct":    "USG%",
+                        display_df = p5_df[["jersey_number", "player_name", "position", "eligibility", "pts_per_game", "reb_per_game", "ast_per_game", "bpm", "fg_pct", "three_pt_pct", "usage_pct"]].rename(columns={
+                            "jersey_number": "#",
+                            "player_name":   "Player",
+                            "position":      "Pos",
+                            "eligibility":   "Yr",
+                            "pts_per_game":  "PTS",
+                            "reb_per_game":  "REB",
+                            "ast_per_game":  "AST",
+                            "bpm":           "BPM",
+                            "fg_pct":        "FG%",
+                            "three_pt_pct":  "3P%",
+                            "usage_pct":     "USG%",
                         })
                         st.dataframe(
                             display_df,
@@ -1050,7 +1052,8 @@ with tab5:
                             use_container_width=True,
                             column_config={
                                 "BPM":  st.column_config.NumberColumn("BPM",  format="%+.2f"),
-                                "TS%":  st.column_config.NumberColumn("TS%",  format="%.1f%%"),
+                                "FG%":  st.column_config.NumberColumn("FG%",  format="%.1f%%"),
+                                "3P%":  st.column_config.NumberColumn("3P%",  format="%.1f%%"),
                                 "USG%": st.column_config.NumberColumn("USG%", format="%.1f%%"),
                                 "PTS":  st.column_config.NumberColumn("PTS",  format="%.1f"),
                                 "REB":  st.column_config.NumberColumn("REB",  format="%.1f"),

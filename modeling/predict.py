@@ -66,15 +66,16 @@ def get_all_team_stats() -> pd.DataFrame:
     return pd.DataFrame(results, columns=columns)
 
 
-def get_top5_by_team(team_name: str) -> pd.DataFrame:
+def get_top8_by_team(team_name: str) -> pd.DataFrame:
     """
-    Pull the top 5 players by minutes for a given team from fct_player_stats.
+    Pull the top 8 players by minutes for a given team from fct_player_stats.
     Minimum 10 games played. Returns one row per player sorted by minutes descending.
     """
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
         SELECT
+            jersey_number,
             player_name,
             position,
             eligibility,
@@ -84,7 +85,12 @@ def get_top5_by_team(team_name: str) -> pd.DataFrame:
             bpm,
             obpm,
             dbpm,
-            ts_pct,
+            CASE
+                WHEN (two_pt_att + three_pt_att) > 0
+                THEN (two_pt_made + three_pt_made)::float / (two_pt_att + three_pt_att)
+                ELSE NULL
+            END AS fg_pct,
+            three_pt_pct,
             usage_pct,
             minutes_pct
         FROM CBB_ANALYTICS.DEV_MARTS.FCT_PLAYER_STATS
@@ -92,7 +98,7 @@ def get_top5_by_team(team_name: str) -> pd.DataFrame:
           AND season = 2026
           AND games >= 10
         ORDER BY minutes_pct DESC
-        LIMIT 5
+        LIMIT 8
     """, (team_name,))
 
     results = cursor.fetchall()
@@ -285,5 +291,5 @@ if __name__ == "__main__":
     for metric, values in result['breakdown'].items():
         print(f"  {metric}: {values['team_a']} vs {values['team_b']} → Edge: {values['edge']} (+{values['diff']})")
 
-    print(f"\nTop 5 players — Duke:")
-    print(get_top5_by_team("Duke").to_string(index=False))
+    print(f"\nTop 8 players — Duke:")
+    print(get_top8_by_team("Duke").to_string(index=False))
