@@ -125,7 +125,7 @@ BRACKET_INPUT = {
         {"seed": 4,  "team": "Arkansas"},
         {"seed": 13, "team": "Hawaii"},
         {"seed": 6,  "team": "BYU"},
-        {"seed": 11, "team": "N.C. State"},  # First Four: Texas vs N.C. State — N.C. State (AdjEM 19.53) favored
+        {"seed": 11, "team": "Texas"},  # First Four winner (Texas beat N.C. State)
         {"seed": 3,  "team": "Gonzaga"},
         {"seed": 14, "team": "Kennesaw St."},
         {"seed": 7,  "team": "Miami FL"},
@@ -180,10 +180,10 @@ N_SIMULATIONS = 10_000
 # Example after R64 East: "R64": ["Duke", "TCU", "St. John's", "Kansas", ...]
 # ─────────────────────────────────────────────────────────────────────────────
 ROUND_RESULTS = {
-    "East":    {"R64": [], "R32": [], "S16": [], "E8": []},
-    "West":    {"R64": [], "R32": [], "S16": [], "E8": []},
-    "South":   {"R64": [], "R32": [], "S16": [], "E8": []},
-    "Midwest": {"R64": [], "R32": [], "S16": [], "E8": []},
+    "East":    {"R64": ["Duke", "TCU", "St. John's", "Kansas", "Louisville", "Michigan St.", "UCLA", "Connecticut"], "R32": [], "S16": [], "E8": []},
+    "West":    {"R64": ["Arizona", "Utah St.", "High Point", "Arkansas", "Texas", "Gonzaga", "Miami FL", "Purdue"], "R32": [], "S16": [], "E8": []},
+    "South":   {"R64": ["Florida", "Iowa", "Vanderbilt", "Nebraska", "VCU", "Illinois", "Texas A&M", "Houston"], "R32": [], "S16": [], "E8": []},
+    "Midwest": {"R64": ["Michigan", "Saint Louis", "Texas Tech", "Alabama", "Tennessee", "Virginia", "Kentucky", "Iowa St."], "R32": [], "S16": [], "E8": []},
 }
 # Final Four actual results: [East/South winner, West/Midwest winner]
 # Matches FINAL_FOUR_PAIRINGS order: (East vs South), (West vs Midwest)

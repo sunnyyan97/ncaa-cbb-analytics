@@ -345,7 +345,10 @@ with tab1:
             ["All", "East", "West", "South", "Midwest"],
             key="bar_reg"
         )
+        active_only1 = st.checkbox("Remaining teams only", value=True, key="active1")
 
+    if active_only1:
+        tourn_df1 = tourn_df1[tourn_df1["tournament_status"] == "active"]
     filtered = tourn_df1.copy()
     if conf_filter != "All":
         filtered = filtered[filtered["conference"] == conf_filter]
@@ -504,7 +507,10 @@ with tab2:
             key="scatter_reg"
         )
         n_teams_scatter = st.slider("Top N teams by AdjEM", 10, len(tourn_df2), len(tourn_df2), key="scatter_n")
+        active_only2 = st.checkbox("Remaining teams only", value=True, key="active2")
 
+    if active_only2:
+        tourn_df2 = tourn_df2[tourn_df2["tournament_status"] == "active"]
     if reg_filter2 != "All":
         tourn_df2 = tourn_df2[tourn_df2["tournament_region"] == reg_filter2]
     scatter_df = tourn_df2.nlargest(n_teams_scatter, "consensus_adj_em").copy()
@@ -621,7 +627,10 @@ with tab3:
     st.markdown('<div class="section-sub">Average stats across each team\'s top 5 players by minutes — min 10 games played</div>', unsafe_allow_html=True)
 
     tourn_only_t3 = st.toggle("NCAA Tournament teams only", value=True, key="tourn_t3")
+    active_only3 = st.toggle("Remaining teams only", value=True, key="active3", disabled=not tourn_only_t3)
     tab_df3 = df[df["is_tournament_team"]] if tourn_only_t3 else df
+    if tourn_only_t3 and active_only3:
+        tab_df3 = tab_df3[tab_df3["tournament_status"] == "active"]
 
     col_t1, col_t2 = st.columns([1, 3])
     with col_t1:
@@ -706,7 +715,10 @@ with tab4:
     st.markdown('<div class="section-sub">Teams in the top-right earned their ranking against tough competition. Top-left teams have a strong record against weak schedules.</div>', unsafe_allow_html=True)
 
     tourn_only_t4 = st.toggle("NCAA Tournament teams only", value=True, key="tourn_t4")
+    active_only4 = st.toggle("Remaining teams only", value=True, key="active4", disabled=not tourn_only_t4)
     tab_df4 = df[df["is_tournament_team"]] if tourn_only_t4 else df
+    if tourn_only_t4 and active_only4:
+        tab_df4 = tab_df4[tab_df4["tournament_status"] == "active"]
 
     col_w1, col_w2 = st.columns([1, 3])
     with col_w1:
