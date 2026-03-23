@@ -412,7 +412,7 @@ with tab1:
 
     fig_bar.update_layout(
         **PLOT_LAYOUT,
-        height=max(400, n_teams_show * 28),
+        height=max(400, len(filtered) * 28),
         xaxis_title="Consensus Adjusted Efficiency Margin",
         yaxis=dict(autorange="reversed", gridcolor="#1f2937"),
         showlegend=True,
@@ -619,6 +619,8 @@ with tab2:
         yaxis=dict(autorange="reversed", gridcolor="#1f2937"),
         showlegend=False,
     )
+    fig_scatter.update_xaxes(dtick=5)
+    fig_scatter.update_yaxes(dtick=5)
     st.plotly_chart(fig_scatter, width="stretch")
 
 # ── Tab 3: Starting Five Table ────────────────────────────────────────────────
@@ -804,7 +806,7 @@ with tab4:
             "<b>%{customdata[0]}</b> (%{customdata[1]})<br>"
             "Record: %{customdata[2]}<br>"
             f"{sos_type}: %{{x:.3f}}<br>"
-            "Wins Above Bubble: %{y:+.1f}<br>"
+            "Wins Above Bubble: %{y:.2f}<br>"
             "WAB Rank: #%{customdata[5]}<br>"
             "Consensus AdjEM: %{customdata[3]:+.2f}<br>"
             "Quality Games: %{customdata[4]}<extra></extra>"

@@ -135,7 +135,7 @@ BRACKET_INPUT = {
     ],
     "South": [
         {"seed": 1,  "team": "Florida"},
-        {"seed": 16, "team": "Lehigh"},  # First Four: Prairie View A&M vs Lehigh — Lehigh (AdjEM -10.31) marginal favorite
+        {"seed": 16, "team": "Prairie View"},  # First Four winner (Prairie View beat Lehigh)
         {"seed": 8,  "team": "Clemson"},
         {"seed": 9,  "team": "Iowa"},
         {"seed": 5,  "team": "Vanderbilt"},
@@ -153,7 +153,7 @@ BRACKET_INPUT = {
     ],
     "Midwest": [
         {"seed": 1,  "team": "Michigan"},
-        {"seed": 16, "team": "UMBC"},  # First Four: UMBC vs Howard — UMBC (AdjEM -1.70) favored
+        {"seed": 16, "team": "Howard"},  # First Four winner (Howard beat UMBC)
         {"seed": 8,  "team": "Georgia"},
         {"seed": 9,  "team": "Saint Louis"},
         {"seed": 5,  "team": "Texas Tech"},
@@ -161,7 +161,7 @@ BRACKET_INPUT = {
         {"seed": 4,  "team": "Alabama"},
         {"seed": 13, "team": "Hofstra"},
         {"seed": 6,  "team": "Tennessee"},
-        {"seed": 11, "team": "SMU"},  # First Four: Miami OH vs SMU — SMU (AdjEM 18.11) favored
+        {"seed": 11, "team": "Miami OH"},  # First Four winner (Miami OH beat SMU)
         {"seed": 3,  "team": "Virginia"},
         {"seed": 14, "team": "Wright St."},
         {"seed": 7,  "team": "Kentucky"},
@@ -180,10 +180,10 @@ N_SIMULATIONS = 10_000
 # Example after R64 East: "R64": ["Duke", "TCU", "St. John's", "Kansas", ...]
 # ─────────────────────────────────────────────────────────────────────────────
 ROUND_RESULTS = {
-    "East":    {"R64": ["Duke", "TCU", "St. John's", "Kansas", "Louisville", "Michigan St.", "UCLA", "Connecticut"], "R32": [], "S16": [], "E8": []},
-    "West":    {"R64": ["Arizona", "Utah St.", "High Point", "Arkansas", "Texas", "Gonzaga", "Miami FL", "Purdue"], "R32": [], "S16": [], "E8": []},
-    "South":   {"R64": ["Florida", "Iowa", "Vanderbilt", "Nebraska", "VCU", "Illinois", "Texas A&M", "Houston"], "R32": [], "S16": [], "E8": []},
-    "Midwest": {"R64": ["Michigan", "Saint Louis", "Texas Tech", "Alabama", "Tennessee", "Virginia", "Kentucky", "Iowa St."], "R32": [], "S16": [], "E8": []},
+    "East":    {"R64": ["Duke", "TCU", "St. John's", "Kansas", "Louisville", "Michigan St.", "UCLA", "Connecticut"], "R32": ["Duke", "St. John's", "Michigan St.", "Connecticut"], "S16": [], "E8": []},
+    "West":    {"R64": ["Arizona", "Utah St.", "High Point", "Arkansas", "Texas", "Gonzaga", "Miami FL", "Purdue"], "R32": ["Arizona", "Arkansas", "Texas", "Purdue"], "S16": [], "E8": []},
+    "South":   {"R64": ["Florida", "Iowa", "Vanderbilt", "Nebraska", "VCU", "Illinois", "Texas A&M", "Houston"], "R32": ["Iowa", "Nebraska", "Illinois", "Houston"], "S16": [], "E8": []},
+    "Midwest": {"R64": ["Michigan", "Saint Louis", "Texas Tech", "Alabama", "Tennessee", "Virginia", "Kentucky", "Iowa St."], "R32": ["Michigan", "Alabama", "Tennessee", "Iowa St."], "S16": [], "E8": []},
 }
 # Final Four actual results: [East/South winner, West/Midwest winner]
 # Matches FINAL_FOUR_PAIRINGS order: (East vs South), (West vs Midwest)
