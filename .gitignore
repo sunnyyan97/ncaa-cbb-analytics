@@ -209,3 +209,5 @@ __marimo__/
 # Generated debug artifacts
 bracket_resolved_debug.html
 dashboard/bracket_resolved_debug.html
+rsa_key.p8
+rsa_key.pub

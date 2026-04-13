@@ -2,15 +2,40 @@ import snowflake.connector
 import pandas as pd
 import os
 from dotenv import load_dotenv
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import serialization
 
 load_dotenv()
 
+def load_private_key():
+    """Load private key from file or environment variable"""
+    if os.path.exists("rsa_key.p8"):
+        with open("rsa_key.p8", "rb") as key_file:
+            private_key = serialization.load_pem_private_key(
+                key_file.read(),
+                password=None,
+                backend=default_backend()
+            )
+    elif "SNOWFLAKE_PRIVATE_KEY" in os.environ:
+        private_key = serialization.load_pem_private_key(
+            os.environ["SNOWFLAKE_PRIVATE_KEY"].encode(),
+            password=None,
+            backend=default_backend()
+        )
+    else:
+        raise ValueError("Private key not found")
+    
+    return private_key.private_bytes(
+        encoding=serialization.Encoding.DER,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption()
+    )
 
 def get_connection():
     return snowflake.connector.connect(
         account=os.environ["SNOWFLAKE_ACCOUNT"],
         user=os.environ["SNOWFLAKE_USER"],
-        password=os.environ["SNOWFLAKE_PASSWORD"],
+        private_key=load_private_key(),
         warehouse=os.environ.get("SNOWFLAKE_WAREHOUSE", "COMPUTE_WH"),
         database=os.environ.get("SNOWFLAKE_DATABASE", "CBB_ANALYTICS"),
         schema=os.environ.get("SNOWFLAKE_SCHEMA", "DEV_MARTS"),

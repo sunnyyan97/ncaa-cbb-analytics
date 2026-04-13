@@ -8,6 +8,8 @@ import os
 from dotenv import load_dotenv
 from modeling.predict import get_all_team_stats, predict_matchup
 from dashboard.render_bracket import render_bracket_html
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import serialization
 
 load_dotenv()
 
@@ -142,12 +144,54 @@ html, body, .stApp {
 """, unsafe_allow_html=True)
 
 # ─── Snowflake Connection ────────────────────────────────────────────────────
+def load_private_key():
+    """
+    Load private key from file (local) or environment variable (Streamlit Cloud).
+    Returns the private key in DER format for Snowflake connection.
+    """
+    # Option 1: From file (for local development)
+    if os.path.exists("rsa_key.p8"):
+        with open("rsa_key.p8", "rb") as key_file:
+            private_key = serialization.load_pem_private_key(
+                key_file.read(),
+                password=None,
+                backend=default_backend()
+            )
+    # Option 2: From Streamlit secrets (for Streamlit Cloud)
+    elif "SNOWFLAKE_PRIVATE_KEY" in st.secrets:
+        private_key = serialization.load_pem_private_key(
+            st.secrets["SNOWFLAKE_PRIVATE_KEY"].encode(),
+            password=None,
+            backend=default_backend()
+        )
+    # Option 3: From environment variable (alternative for Streamlit Cloud)
+    elif "SNOWFLAKE_PRIVATE_KEY" in os.environ:
+        private_key = serialization.load_pem_private_key(
+            os.environ["SNOWFLAKE_PRIVATE_KEY"].encode(),
+            password=None,
+            backend=default_backend()
+        )
+    else:
+        raise ValueError(
+            "Private key not found. Please provide either:\n"
+            "  1. rsa_key.p8 file in project root (for local dev)\n"
+            "  2. SNOWFLAKE_PRIVATE_KEY in Streamlit secrets (for cloud)\n"
+            "  3. SNOWFLAKE_PRIVATE_KEY environment variable"
+        )
+    
+    # Convert to DER format (required by Snowflake connector)
+    return private_key.private_bytes(
+        encoding=serialization.Encoding.DER,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption()
+    )
+
 @st.cache_resource
 def get_connection():
     return snowflake.connector.connect(
         account=os.environ["SNOWFLAKE_ACCOUNT"],
         user=os.environ["SNOWFLAKE_USER"],
-        password=os.environ["SNOWFLAKE_PASSWORD"],
+        private_key=load_private_key(),
         warehouse=os.environ.get("SNOWFLAKE_WAREHOUSE", "COMPUTE_WH"),
         database=os.environ.get("SNOWFLAKE_DATABASE", "CBB_ANALYTICS"),
         schema=os.environ.get("SNOWFLAKE_SCHEMA", "DEV_MARTS"),
