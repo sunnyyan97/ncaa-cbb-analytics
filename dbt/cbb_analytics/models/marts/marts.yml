@@ -118,6 +118,64 @@ models:
       - name: usage_pct
         description: "Percentage of team possessions used by the player while on court"
 
+  - name: fct_game_results
+    description: >
+      Incremental fact table of game-by-game results. One row per team per game.
+      Builds on stg_torvik__game_results and joins fct_team_ratings to denormalize
+      opponent consensus rank. Merges on game_team_id so re-ingested raw data
+      never creates duplicates. New rows added on each daily run.
+
+    columns:
+      - name: game_team_id
+        description: "Surrogate key — unique identifier for each team/game combination"
+        tests:
+          - unique
+          - not_null
+
+      - name: game_id
+        description: "BartTorvik composite game identifier"
+        tests:
+          - not_null
+
+      - name: season
+        description: "Season year e.g. 2026"
+        tests:
+          - not_null
+
+      - name: game_date
+        description: "Date the game was played"
+
+      - name: team_name
+        description: "Team this row represents"
+        tests:
+          - not_null
+
+      - name: opponent_name
+        description: "Opponent team name"
+        tests:
+          - not_null
+
+      - name: opponent_rank
+        description: "Opponent's consensus rank (avg of KenPom + BartTorvik AdjEM) at season snapshot"
+
+      - name: game_location
+        description: "Home, Away, or Neutral — from this team's perspective"
+
+      - name: team_score
+        description: "Points scored by this team"
+
+      - name: opp_score
+        description: "Points scored by the opponent"
+
+      - name: score_margin
+        description: "team_score minus opp_score"
+
+      - name: team_win
+        description: "True if this team won"
+
+      - name: result
+        description: "Display string e.g. 'W 80-71' or 'L 68-74'"
+
   - name: fct_tournament_profile
     description: >
       Master analytical table combining team efficiency ratings, strength of

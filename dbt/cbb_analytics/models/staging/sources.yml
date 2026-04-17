@@ -20,3 +20,5 @@ sources:
         description: "Raw BartTorvik team results"
       - name: torvik_player_stats
         description: "Raw BartTorvik player stats"
+      - name: cbb_game_results
+        description: "Raw BartTorvik game-by-game results — one row per team per game"

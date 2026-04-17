@@ -53,6 +53,58 @@ models:
       - name: sos
         description: "Overall strength of schedule"
 
+  - name: stg_torvik__game_results
+    description: >
+      Staged BartTorvik game results. One row per team per game.
+      Cleans and casts raw columns — game_day parsed to a proper DATE,
+      scores cast to integers, score_margin derived. Includes both
+      perspectives of each game (team and opponent rows are separate).
+
+    columns:
+      - name: game_team_id
+        description: "Surrogate key — unique identifier for each team/game combination"
+        tests:
+          - unique
+          - not_null
+
+      - name: game_id
+        description: "BartTorvik composite game identifier"
+        tests:
+          - not_null
+
+      - name: season
+        description: "Season year e.g. 2026"
+        tests:
+          - not_null
+
+      - name: game_date
+        description: "Date the game was played, parsed from MM/DD/YY string"
+
+      - name: team_name
+        description: "BartTorvik name of the team this row represents"
+        tests:
+          - not_null
+
+      - name: opponent_name
+        description: "BartTorvik name of the opponent"
+        tests:
+          - not_null
+
+      - name: game_location
+        description: "Location from queried team's perspective — Home, Away, or Neutral"
+
+      - name: team_score
+        description: "Points scored by this team"
+
+      - name: opp_score
+        description: "Points scored by the opponent"
+
+      - name: score_margin
+        description: "team_score minus opp_score — positive means win"
+
+      - name: team_win
+        description: "True if this team won the game"
+
   - name: stg_torvik__player_stats
     description: >
       Staged BartTorvik player stats. One row per player per season.
